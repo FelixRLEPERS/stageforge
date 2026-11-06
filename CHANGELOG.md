@@ -231,6 +231,40 @@ Facts verified by measurement (not hypotheses):
 Decision: default backend = fp16 (fastest available). ONNX stays an
 opt-in via `backend="onnx"` in config.
 
+### Camera bench diagnosis (2026-11-06)
+
+Measured with `scripts/diagnose_camera.py` (two phases per index: the
+device's default negotiated mode, then the pipeline's
+1920x1080/fps30/MJPG request from `capture/source.py:87-92`), plus
+`ffmpeg -f dshow -list_devices/-list_options` and a PnP device query:
+
+| idx | device present today | default mode | pipeline 1080p request |
+| --- | --- | --- | --- |
+| 0 | Logitech QuickCam Pro 9000 (USB 2.0, behind a Genesys hub) | 640x480@30, **live** (reads 25-62 ms, frame diff 2.9) | **unsupported** — dshow lists no 1920x1080 mode (max 1600x1200@5); read blocks ~10 s with 0 frames or raises `cv2.error: _step >= minstep` |
+| 1 | NVIDIA Broadcast virtual camera (VCAMDS) | 640x480 at ~1 fps, near-black (consumer `Init Failed Err -610`, Broadcast app closed) | 1920x1080 at exactly ~1005 ms (**1 fps**), bit-identical all-black frames (`std=0`, `diff=0`) |
+
+Facts (each measured, not assumed):
+
+- The FHD HDMI capture dongle (`VID_345F PID_2131`) is a PnP **phantom —
+  physically absent**; no Canon body is enumerated anywhere. The config
+  labels "5D Mark IV" / "5D Mark II (ML)" do not correspond to present
+  hardware; the earlier "camera 1: 1920x1080 @ 1 fps" was the virtual
+  Broadcast camera, not a Canon.
+- Camera index order was re-verified in-process via the VCAMDS driver
+  log timestamps against the script's wall-clock markers — indices are
+  0 = Logitech, 1 = Broadcast cam on this bench.
+- Refuted hypotheses: *camera in Photo mode* (no Canon attached to
+  inspect), *USB 2.0 bandwidth* (the dongle chained directly to a
+  USB 3.0 root hub while present; the Logitech's own modes are USB 2.0
+  by design), *YUY2 uncompressed overload* (dshow reports `bgr24` /
+  `yuv420p` formats only).
+- Conclusion: the ~1000 ms `capture.read` is an **external
+  device-cause, not a pipeline defect** — per the no-guessing rule no
+  code was changed; the camera path is re-verified when the dongle and
+  Canon bodies are re-attached (pilot).
+- Artifacts: `out/diag_cam_*.png` (phase-B frames),
+  `out/diag_err*.log` (VCAMDS driver log), both under gitignored `out/`.
+
 ### Decisions taken while scaffolding (MVP)
 
 - **MVP keys mirror the plan's schema instead of reusing the scaffold
