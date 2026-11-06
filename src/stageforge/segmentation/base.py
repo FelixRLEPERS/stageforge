@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from stageforge.core.types import AlphaMask, DepthMap, Frame
+from stageforge.core.types import AlphaMask, DepthMap, Frame, RelativeDepthFrame
 
 
 class SegmentationError(RuntimeError):
@@ -15,7 +15,9 @@ class Segmenter(ABC):
     """Builds an :class:`AlphaMask` for the foreground of one frame.
 
     Input: the plate ``Frame`` plus, when available, the matching
-    ``DepthMap``; behaviour is chosen by ``segmenter.engine``.
+    ``DepthMap`` (metric, from a depth sensor) or ``RelativeDepthFrame``
+    (from a monocular network — see ADR 0002); behaviour is chosen by
+    ``segmentation.engine``.
     Output: a uint8 mask of the same spatial size, with a confidence
     value so quality can be logged and compared between engines.
     Raises: ``SegmentationError`` on inference failure — the compositor
@@ -27,5 +29,9 @@ class Segmenter(ABC):
         """Load models/weights and run one dry inference."""
 
     @abstractmethod
-    def segment(self, frame: Frame, depth: DepthMap | None = None) -> AlphaMask:
+    def segment(
+        self,
+        frame: Frame,
+        depth: DepthMap | RelativeDepthFrame | None = None,
+    ) -> AlphaMask:
         """Return the foreground matte for this frame."""

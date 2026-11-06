@@ -7,8 +7,55 @@ downstream works on `core.types.Frame` and never on a device handle.
 
 | Transport | Typical gear | Notes |
 |-----------|--------------|-------|
-| SDI | Blackmagic DeckLink, SDI-to-NDI bridge | Needs a frame grabber SDK; genlock preferred |
-| NDI | Any NDI encoder, software mixer | Runs on plain 1 GbE; discovery via mDNS |
+| SDI | Blackmagic DeckLink, SDI-to-NDI bridge | Pilot phase; needs a frame grabber SDK, genlock preferred |
+| NDI | Any NDI encoder, software mixer | Pilot phase; plain 1 GbE, discovery via mDNS |
+| USB (UVC) | 2 × FHD USB capture cards (**MVP**) | Read with `cv2.VideoCapture(index)`, no driver, no genlock |
+
+### MVP rig: Canon 5D Mark IV + 5D Mark II (Magic Lantern)
+
+The customer rig has no SDI and no frame grabber, so both cameras are
+ingested over USB:
+
+- **Canon 5D Mark IV** — clean HDMI 1080p, full 1920×1080 raster.
+- **Canon 5D Mark II + Magic Lantern** — *Clear Overlays* is switched on,
+  which removes the on-screen UI but does **not** change the geometry:
+  the body emits **1620×1080 (3:2) inside 1920×1080**, with ~150 px of
+  pure-black pillarbox on each side. That is a property of the sensor's
+  3:2 aspect being fitted to a 16:9 output, not an overlay.
+- Both cameras appear as `cv2.VideoCapture(0)` and `cv2.VideoCapture(1)`.
+
+### Autocrop
+
+`capture/crop.py` finds and removes those bars:
+
+- `detect_pillarbox()` / `detect_letterbox()` average brightness per
+  column/row, take the lit region as content, and return `(x1, y1, x2, y2)`
+  — or `None`.
+- `detect_bars()` intersects the two; `apply_crop()` cuts the rectangle;
+  `crop_to_aspect()` centre-crops the result to the target ratio.
+
+The detector is deliberately conservative: it needs at least
+`min_content_ratio` (default 0.5) of the raster to be lit, otherwise it
+returns `None` and the frame passes through untouched. On the Mark IV
+there are no bars, so the detector finds a fully lit frame and returns
+`None` — **autocrop is a no-op there by construction**, never a risk.
+
+The rectangle is detected on the raw frame and then **cached** for
+`autocrop.refresh_interval` frames (default 300 ≈ 10 s), because a
+locked-off studio camera does not change geometry mid-show and searching
+every frame costs more than the crop itself. Changes are logged as
+`autocrop updated: old -> new`.
+
+### USB synchronisation
+
+Two capture cards on two different host controllers never deliver frames
+in lock-step. `MultiCameraSource` reads every camera once per round and
+compares frame ids; a spread above `camera.max_skew` (default 2) is
+logged as a warning and counted in `desyncs`, which appears in the run
+summary. Stale frames are dropped, never delayed — broadcast prefers a
+dropped frame to a late one. Plugging the two cards into **different USB
+controllers** (not a shared hub) keeps the drift small enough to stay
+under the threshold.
 
 ## Contract
 
@@ -39,7 +86,13 @@ never buffered — broadcast prefers a dropped frame over a late one.
 
 ## Reference implementation status
 
-`stub.py` raises
-`NotImplementedError("StageForge scaffold — replace in MVP phase")`.
-The first real implementation should target NDI, because it needs no
-kernel driver and therefore runs on any dev laptop.
+| Class | File | Status |
+|-------|------|--------|
+| `StubCaptureSource` | `capture/stub.py` | scaffold placeholder |
+| `UsbCameraSource` | `capture/source.py` | **MVP** — UVC + cached autocrop |
+| `SyntheticCameraSource` | `capture/synthetic.py` | dry runs, tests and CI |
+| `MultiCameraSource` | `capture/multi.py` | frame-id alignment + desync counter |
+
+NDI and SDI remain stubs and are planned for the pilot phase
+(see [11-roadmap.md](11-roadmap.md)); NDI needs no kernel driver and is
+therefore the natural first target for a dev laptop.

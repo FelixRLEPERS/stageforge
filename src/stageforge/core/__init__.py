@@ -8,6 +8,7 @@ from stageforge.core.types import (
     CameraPose,
     DepthMap,
     Frame,
+    RelativeDepthFrame,
     RundownCue,
 )
 
@@ -18,6 +19,7 @@ __all__ = [
     "DepthMap",
     "Frame",
     "Layer",
+    "RelativeDepthFrame",
     "RundownCue",
     "StubLayer",
 ]

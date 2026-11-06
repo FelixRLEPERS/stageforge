@@ -2,5 +2,6 @@
 
 from stageforge.storylink.base import CueMatchError, StoryLink
 from stageforge.storylink.stub import StubStoryLink
+from stageforge.storylink.yaml_provider import YamlStoryLink
 
-__all__ = ["CueMatchError", "StoryLink", "StubStoryLink"]
+__all__ = ["CueMatchError", "StoryLink", "StubStoryLink", "YamlStoryLink"]

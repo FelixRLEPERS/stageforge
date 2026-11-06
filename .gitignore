@@ -19,6 +19,9 @@ build/
 # Documentation build output
 site/
 
+# Pipeline run output (FileOutputSink)
+out/
+
 # Unreal / binaries
 *.uasset
 *.umap

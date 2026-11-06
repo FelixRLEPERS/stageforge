@@ -3,9 +3,23 @@
 The last layer turns the composited frame into something a vision
 mixer can use on air.
 
-## Two delivery paths
+## MVP: file + NDI
 
-### SDI Key/Fill
+The MVP ships two sinks and deliberately no SDI:
+
+| Sink | File | Behaviour |
+|------|------|-----------|
+| File | `output/file_sink.py` | Writes `fill_NNNN.png` + `key_NNNN.png` — the cheapest way to *look* at what the pipeline produced, and what CI uses to prove the chain end to end |
+| NDI | `output/ndi_sink.py` | Streams RGBA via `ndi-python` (`[ndi]` extra) straight into OBS or a control room |
+| Null | `output/null_sink.py` | Counts frames, writes nothing — dry runs and benchmarks |
+
+If `ndi-python` or the NDI runtime is missing, `NDIOutputSink` **degrades
+to a counted no-op** instead of raising: it records `reason`, logs it
+once, and counts every subsequent frame as dropped. A show must not go
+down because a library is absent; inspect `sink.reason` to know whether
+you are actually on air.
+
+### SDI Key/Fill — pilot phase
 
 Two synchronous SDI streams out of a Blackmagic DeckLink card:
 
@@ -16,6 +30,10 @@ Two synchronous SDI streams out of a Blackmagic DeckLink card:
 The downstream switcher (or Ultimatte) combines them. Both streams
 must share the same genlock and the same scan mode (1080i50,
 1080p59.94, …). A mismatch is a hard error, not a warning.
+
+This requires broadcast cameras with SDI outputs and a capture card the
+current rig does not have, so it stays a **pilot-phase** target — the
+MVP camera bodies only output HDMI.
 
 ### NDI with alpha
 
@@ -52,4 +70,9 @@ last good frame.
 
 ## Status
 
-`OutputSink` is a stub.
+| Class | File | Status |
+|-------|------|--------|
+| `FileOutputSink` | `output/file_sink.py` | **MVP** |
+| `NDIOutputSink` | `output/ndi_sink.py` | **MVP**, degrades to null if unavailable |
+| `NullOutputSink` | `output/null_sink.py` | **MVP** — tests and dry runs |
+| `StubOutputSink` | `output/stub.py` | scaffold placeholder; SDI stays here until the pilot |

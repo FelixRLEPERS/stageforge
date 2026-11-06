@@ -3,11 +3,40 @@
 **Goal.** Prove that we can produce a depth map and a usable alpha
 mask of a presenter, live, without a green screen.
 
-## Hypothesis
+> **Implementation lives in `src/stageforge/`**, not here. This folder
+> documents the hypothesis; the code that fulfils it sits behind the
+> interfaces already defined in `src/stageforge/*/base.py`.
+
+## Real configuration (as delivered)
+
+The customer rig differs from the original ToF hypothesis above:
+
+| Item | Reality |
+|------|---------|
+| Cameras | **Canon 5D Mark IV** (clean HDMI) + **Canon 5D Mark II** with Magic Lantern (Clear Overlays ON) |
+| Raster of the 5D II | 1620×1080 (3:2) inside 1920×1080, ~150 px pillarbox per side — autocropped by `capture/crop.py` |
+| Ingest | **Two FHD USB capture cards**, visible as `cv2.VideoCapture(0)` / `cv2.VideoCapture(1)` |
+| Depth | **Monocular** — `depth-anything/Depth-Anything-V2-Small-hf` via `transformers`, relative `[0, 1]`, not metric ([ADR 0002](../../docs/adr/0002-monocular-depth-contract.md)) |
+| Alpha | `segmentation/depth_alpha.py` — percentile stretch, inverted so near = 255 |
+| SDI / DeckLink / Orbbec / RealSense | **not used** — pilot phase only |
+
+Map to code:
+
+```
+src/stageforge/capture/           UsbCameraSource, SyntheticCameraSource, MultiCameraSource, crop
+src/stageforge/reconstruction/    MonocularDepthProvider, SyntheticDepthProvider
+src/stageforge/segmentation/      DepthAlphaSegmenter, metric (pilot)
+```
+
+## Original hypothesis
 
 A single ToF depth sensor, calibrated against one studio camera, is
 enough to separate a standing presenter from the set at broadcast
 frame rates — no machine-learning model, no chromakey.
+
+This hypothesis was **partly superseded**: the MVP has no depth sensor,
+so monocular estimation from the RGB frame is used instead. The ToF
+variant returns in Phase 2 (pilot).
 
 ## Success criteria
 

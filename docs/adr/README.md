@@ -72,3 +72,5 @@ What was decided, stated as "We will …".
 | ADR | Title | Status |
 |-----|-------|--------|
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |
+| [0002](0002-monocular-depth-contract.md) | Monocular depth is relative, not metric | Accepted |
+| [0003](0003-pull-based-capture-contract.md) | Pull-based capture contract | Accepted |

@@ -1,5 +1,13 @@
-"""Orchestrator — wiring and lifecycle of the five pipeline layers."""
+"""Orchestration — lifecycle of the five pipeline layers."""
 
-from stageforge.orchestrator.pipeline import Pipeline, PipelineError
+from stageforge.orchestrator.builder import Chain, build_chain
+from stageforge.orchestrator.pipeline import Pipeline, PipelineError, RunStats, StageForgePipeline
 
-__all__ = ["Pipeline", "PipelineError"]
+__all__ = [
+    "Chain",
+    "Pipeline",
+    "PipelineError",
+    "RunStats",
+    "StageForgePipeline",
+    "build_chain",
+]

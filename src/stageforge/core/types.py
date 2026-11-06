@@ -63,6 +63,21 @@ class DepthMap:
 
 
 @dataclass(frozen=True, slots=True)
+class RelativeDepthFrame:
+    """Monocular relative depth in ``[0, 1]``: 0 = nearest, 1 = farthest.
+
+    Produced by a monocular network, which recovers ordering but not
+    scale. See ADR 0002 — conversion to an alpha mask happens in L3.
+    """
+
+    camera_id: str
+    timestamp_us: int
+    data: DepthArray
+    model_id: str = ""
+    confidence: float = 1.0
+
+
+@dataclass(frozen=True, slots=True)
 class AlphaMask:
     """Foreground coverage in ``[0, 255]`` matching the source frame."""
 

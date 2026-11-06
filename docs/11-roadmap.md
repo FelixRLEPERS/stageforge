@@ -13,21 +13,32 @@ must produce something observable on a real monitor — no milestone is
 - [x] Repository, CI, docs skeleton, interfaces and stubs
 - [x] ADR process, contribution and security policies
 
-## Phase 1 — Prototypes (de-risk)
+## Phase 1 — MVP on the customer rig (in progress)
 
-| ID | Prototype | Success criterion |
-|----|-----------|-------------------|
-| P01 | [Depth MVP](https://github.com/stageforge/stageforge/blob/main/prototypes/p01-depth-mvp/README.md) | depth map + alpha at ≥ 25 fps |
-| P02 | [Key/Fill MVP](https://github.com/stageforge/stageforge/blob/main/prototypes/p02-keyfill-mvp/README.md) | end-to-end latency ≤ 4 frames |
-| P03 | [Story-Link MVP](https://github.com/stageforge/stageforge/blob/main/prototypes/p03-story-link-mvp/README.md) | cue → 3D object mapping from YAML |
+Real hardware as delivered: **Canon 5D Mark IV + 5D Mark II (Magic
+Lantern)** into two USB FHD capture cards, monocular depth, no SDI.
 
-## Phase 2 — MVP pipeline
+| ID | Milestone | Success criterion | Status |
+|----|-----------|-------------------|--------|
+| P01 | [Depth MVP](https://github.com/stageforge/stageforge/blob/main/prototypes/p01-depth-mvp/README.md) | depth map + alpha at ≥ 25 fps | ◐ implementation landed in `src/stageforge/` |
+| P02 | [Key/Fill MVP](https://github.com/stageforge/stageforge/blob/main/prototypes/p02-keyfill-mvp/README.md) | end-to-end latency ≤ 4 frames | ◐ measured via `avg_latency_ms` in the run report |
+| P03 | [Story-Link MVP](https://github.com/stageforge/stageforge/blob/main/prototypes/p03-story-link-mvp/README.md) | cue → object mapping from YAML | ✔ `YamlStoryLink` resolves `configs/storylink.yaml` |
 
-- [ ] `CaptureSource` over NDI with genlock timestamps
+- [x] `UsbCameraSource` over UVC with pillarbox autocrop
+- [x] `MultiCameraSource` frame-id alignment + desync counter
+- [x] `MonocularDepthProvider` (Depth Anything V2, relative depth)
+- [x] `DepthAlphaSegmenter` percentile key
+- [x] `Simple2DCompositor` + `FileOutputSink` / `NDIOutputSink`
+- [x] `StageForgePipeline.run()` wiring all five layers
+- [ ] Measured ≥ 25 fps sustained on the customer machine
+
+## Phase 2 — Pilot (broadcast hardware)
+
+- [ ] Broadcast cameras + DeckLink **SDI capture**, genlock timestamps
 - [ ] `Tracker` speaking Free-D from a robotic head
-- [ ] `DepthProvider` from a ToF sensor, depth-threshold `Segmenter`
-- [ ] `Pipeline.run()` wiring all five layers
-- [ ] `OutputSink` to NDI with alpha (SDI follows in Phase 3)
+- [ ] Real `DepthProvider` (ToF/stereo) replacing monocular depth
+- [ ] SDI Key/Fill output, measured ≤ 4 frames end to end
+- [ ] NDI capture path (genlock-free alternative to SDI)
 
 ## Phase 3 — Broadcast readiness
 

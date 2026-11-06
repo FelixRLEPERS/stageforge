@@ -17,6 +17,10 @@ class StubCaptureSource(CaptureSource):
         """Raise until a real NDI/SDI source exists."""
         raise NotImplementedError(_MESSAGE)
 
+    def read(self) -> Frame:
+        """Raise until a real NDI/SDI source exists."""
+        raise NotImplementedError(_MESSAGE)
+
     def frames(self) -> Iterator[Frame]:
         """Raise until a real NDI/SDI source exists."""
         raise NotImplementedError(_MESSAGE)

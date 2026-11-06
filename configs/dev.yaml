@@ -1,7 +1,76 @@
-# Development configuration.
-# Every layer is a stub: this file runs without any hardware attached.
-# Copy prod.example.yaml and adapt for a real studio.
+# Development configuration — two groups of keys:
+#   MVP (read by src/stageforge/orchestrator/builder.py):
+#     mode, camera, reconstruction, segmentation, compositing,
+#     output.mode/out_dir/ndi_name, storylink
+#   Scaffold (abstract layer contracts, kept for reference):
+#     cameras, depth, tracker, segmenter, compositor, logging,
+#     plus the output.* sub-keys (sink/device/scan_mode/key_level)
+# Documented field by field in docs/09-configuration.md.
 
+# "monocular" = real USB cameras + Depth Anything V2   (requires .[ml])
+# "synthetic" = generated frames, no hardware, no torch (dry runs, CI)
+mode: monocular
+
+camera:
+  num_cameras: 2
+  max_skew: 2
+  cameras:
+    - name: "5D Mark IV"
+      source: 0
+      autocrop:
+        enabled: true          # safe: a detector miss returns None (no-op)
+        threshold: 10
+        refresh_interval: 300
+        target_aspect: "16:9"
+    - name: "5D Mark II (ML)"
+      source: 1
+      autocrop:
+        enabled: true          # crops the 1620x1080 pillarbox of the 5D II
+        threshold: 10
+        refresh_interval: 300
+        target_aspect: "16:9"
+  width: 1920
+  height: 1080
+  fps: 30
+  synthetic:
+    pattern: "pillarbox"       # plain | bars | pillarbox
+
+reconstruction:
+  monocular:
+    device: "auto"             # auto | cuda | cpu
+    model_id: "depth-anything/Depth-Anything-V2-Small-hf"
+    near_is_high: true         # model polarity; output is normalised to 0=near
+
+segmentation:
+  depth_alpha:
+    low_pct: 5.0               # nearest percentiles fully keyed
+    high_pct: 95.0             # farthest percentiles fully clear
+    morphology_kernel: 3       # odd; 0 or 1 disables morphology
+    invert: true               # low depth = foreground (255)
+
+compositing:
+  mode: "2d"
+  topic: "military_tech"       # key into configs/storylink.yaml
+  background_shade: 0.55       # brightness the keyed-out background keeps
+
+output:
+  mode: "file"                 # file | ndi | null
+  out_dir: "out"
+  ndi_name: "StageForge Preview"
+  sink: null                   # scaffold contract: sdi | ndi | null
+  device: 0
+  scan_mode: 1080i50
+  key_level: 1.0
+
+storylink:
+  rules: "configs/storylink.yaml"
+  strict: false
+
+logging:
+  level: debug
+  json: false
+
+# --- scaffold schema (layer contracts, not read by the MVP pipeline) ---
 cameras:
   - id: cam_a
     transport: ndi
@@ -28,13 +97,3 @@ compositor:
   engine: none            # unreal | none
   bridge: direct          # aximmetry | zerodensity | mosys | direct
   fallback: pass_through  # fail_air | pass_through
-
-output:
-  sink: null              # sdi | ndi | null
-  device: 0
-  scan_mode: 1080i50
-  key_level: 1.0
-
-logging:
-  level: debug
-  json: false

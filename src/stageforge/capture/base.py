@@ -15,10 +15,12 @@ class SourceUnavailableError(RuntimeError):
 class CaptureSource(ABC):
     """Produces timestamped :class:`Frame` objects from one video device.
 
-    Input: a source descriptor from the ``cameras`` config section
-    (transport, endpoint, expected frame rate).
-    Output: an iterator of ``Frame`` ordered by capture timestamp, with
-    the timestamp taken from genlock/PTP where available.
+    Input: a source descriptor from the config ``camera`` section
+    (device index or endpoint, expected raster and frame rate).
+    Output: ``Frame`` objects carrying a monotonic capture timestamp in
+    microseconds plus a per-source sequence id used for multi-camera
+    alignment; ``read()`` is the pull API the orchestrator uses and
+    ``frames()`` is its iterator form.
     Raises: ``SourceUnavailableError`` if the device cannot be opened or
     is lost mid-stream; late frames are dropped, never delayed.
     """
@@ -26,6 +28,10 @@ class CaptureSource(ABC):
     @abstractmethod
     def open(self) -> None:
         """Acquire the device and wait until it delivers frames."""
+
+    @abstractmethod
+    def read(self) -> Frame:
+        """Return exactly one frame, or raise ``SourceUnavailableError``."""
 
     @abstractmethod
     def frames(self) -> Iterator[Frame]:

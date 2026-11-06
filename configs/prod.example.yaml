@@ -1,5 +1,62 @@
 # Production template — copy to configs/prod.local.yaml (gitignored)
 # and fill in the real device identifiers before a show.
+#
+# Two groups of keys, exactly as in configs/dev.yaml:
+#   MVP (read by src/stageforge/orchestrator/builder.py):
+#     mode, camera, reconstruction, segmentation, compositing,
+#     output.mode/out_dir/ndi_name, storylink
+#   Scaffold (abstract layer contracts, kept for reference):
+#     cameras, depth, tracker, segmenter, compositor, logging,
+#     plus the output.* sub-keys (sink/device/scan_mode/key_level)
+# Documented field by field in docs/09-configuration.md.
+
+# "monocular" = real USB cameras + Depth Anything V2   (requires .[ml])
+# "synthetic" = generated frames, no hardware, no torch (dry runs, CI)
+mode: monocular
+
+camera:
+  num_cameras: 2
+  max_skew: 2                # frame-id spread tolerated before counting a desync
+  cameras:
+    - name: "5D Mark IV"     # camera_id used in logs and Frame
+      source: 0              # cv2.VideoCapture index on this machine
+      autocrop:
+        enabled: true        # no bars on this body — detector returns None
+        threshold: 10
+        refresh_interval: 300
+        target_aspect: "16:9"
+    - name: "5D Mark II (ML)"
+      source: 1
+      autocrop:
+        enabled: true        # crops the 1620x1080 pillarbox of the 5D II
+        threshold: 10
+        refresh_interval: 300
+        target_aspect: "16:9"
+  width: 1920
+  height: 1080
+  fps: 30
+  synthetic:
+    pattern: "pillarbox"     # plain | bars | pillarbox (synthetic mode only)
+
+reconstruction:
+  monocular:
+    device: "auto"           # auto | cuda | cpu
+    model_id: "depth-anything/Depth-Anything-V2-Small-hf"
+    near_is_high: true       # native model polarity; output is always 0 = near
+
+segmentation:
+  depth_alpha:
+    low_pct: 5.0             # nearest percentiles fully keyed
+    high_pct: 95.0           # farthest percentiles fully clear
+    morphology_kernel: 3     # odd; 0 or 1 disables morphology
+    invert: true             # low depth = foreground (255)
+
+compositing:
+  mode: "2d"                 # only 2d exists in the MVP
+  topic: "military_tech"     # key into configs/storylink.yaml
+  background_shade: 0.55     # brightness the keyed-out background keeps
+
+# --- scaffold schema (layer contracts, not read by the MVP pipeline) ---
 
 cameras:
   - id: cam_a
@@ -36,8 +93,13 @@ compositor:
   endpoint: "tcp://10.0.0.20:30000"
   fallback: pass_through  # fail_air | pass_through
 
+# Both groups share one output mapping (YAML has no namespacing); the
+# field names are disjoint, so output.mode and output.sink coexist.
 output:
-  sink: sdi               # sdi | ndi | null
+  mode: "ndi"             # MVP: file | ndi | null
+  out_dir: "out"
+  ndi_name: "StageForge Program"
+  sink: sdi               # scaffold contract: sdi | ndi | null
   device: 0
   scan_mode: 1080i50
   key_level: 1.0

@@ -35,6 +35,17 @@ dev = [
   "pre-commit",
   "mkdocs",
 ]
+# Heavy / SDK-bound extras: never pulled in by `pip install stageforge`.
+# The pipeline imports them lazily and explains what is missing.
+ml = [
+  "torch>=2.0",
+  "torchvision",
+  "transformers>=4.45",
+  "timm",
+]
+ndi = [
+  "ndi-python",
+]
 
 [project.urls]
 Homepage = "https://github.com/stageforge/stageforge"
@@ -66,6 +77,26 @@ known-first-party = ["stageforge"]
 strict = true
 packages = ["stageforge"]
 mypy_path = "src"
+
+# Optional extras ([ml], [ndi]) and loguru are legitimately absent from a
+# bare environment and from the CI matrix; their imports are guarded at
+# runtime, so stubs must not be required to type-check them.
+[[tool.mypy.overrides]]
+module = [
+  "loguru",
+  "loguru.*",
+  "torch",
+  "torch.*",
+  "torchvision",
+  "torchvision.*",
+  "transformers",
+  "transformers.*",
+  "timm",
+  "timm.*",
+  "NDIlib",
+  "NDIlib.*",
+]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
