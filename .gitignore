@@ -58,3 +58,7 @@ Thumbs.db
 models/
 
 tools/image_mcp.py
+
+tools/
+opencode.json
+AGENTS.md
