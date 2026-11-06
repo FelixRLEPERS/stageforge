@@ -109,6 +109,7 @@ def build_chain(config: Mapping[str, Any], dry_run: bool = False) -> Chain:
             high_pct=float(segmenter_cfg.get("high_pct", 95.0)),
             morphology_kernel=int(segmenter_cfg.get("morphology_kernel", 3)),
             invert=bool(segmenter_cfg.get("invert", True)),
+            percentile_scale=float(segmenter_cfg.get("percentile_scale", 0.25)),
         ),
         compositor=Simple2DCompositor(
             background_shade=(

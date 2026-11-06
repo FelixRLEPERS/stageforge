@@ -56,6 +56,8 @@ class SyntheticCameraSource(CaptureSource):
         self._rect: Rect | None = None
         self._frame_id = 0
         self._opened = False
+        self._detected_once: bool = False
+        self._since_detect: int = 0
 
     @property
     def crop_rect(self) -> Rect | None:
@@ -80,9 +82,11 @@ class SyntheticCameraSource(CaptureSource):
         self._frame_id += 1
         raw = self._render()
         if self._autocrop:
-            due = self._rect is None or self._frame_id % self._refresh == 0
-            if due:
+            self._since_detect += 1
+            if not self._detected_once or self._since_detect >= self._refresh:
                 self._rect = detect_bars(raw, threshold=self._threshold)
+                self._detected_once = True
+                self._since_detect = 0
             image = apply_crop(raw, self._rect) if self._rect is not None else raw
             image = crop_to_aspect(image, self._target_aspect)
         else:

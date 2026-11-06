@@ -59,6 +59,7 @@ make clean     # remove caches
 # tests/test_core_types.py
 from stageforge.core.types import Frame
 
+
 def test_frame_is_immutable() -> None:
     f = Frame(timestamp_us=0, width=1920, height=1080, data=None)
     assert f.timestamp_us == 0

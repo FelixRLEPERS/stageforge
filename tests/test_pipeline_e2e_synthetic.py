@@ -18,6 +18,9 @@ def _config(output_mode: str, out_dir: Path | None = None) -> dict[str, Any]:
         "camera": {"num_cameras": 1, "synthetic": {"pattern": "pillarbox"}},
         "compositing": {"topic": "military_tech"},
         "output": {"mode": output_mode},
+        # pin percentile_scale=1.0 so this e2e test measures the full-size path;
+        # the default 0.25 is covered by test_segmentation_depth_alpha.
+        "segmentation": {"depth_alpha": {"percentile_scale": 1.0}},
     }
     if out_dir is not None:
         config["output"]["out_dir"] = str(out_dir)

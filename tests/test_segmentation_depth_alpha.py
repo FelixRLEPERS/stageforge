@@ -97,3 +97,27 @@ def test_metric_path_stays_available_for_the_pilot() -> None:
     assert alpha[0, 0] == 255  # closer than the near plane
     assert alpha[0, 2] == 0  # beyond the far plane
     assert 0 < int(alpha[0, 1]) < 255  # inside the ramp
+
+
+def test_percentile_scale_matches_full() -> None:
+    """Downscaled percentile window must stay within 2 uint8 of full."""
+    rng = np.random.default_rng(0)
+    depth = np.asarray(rng.uniform(0.0, 1.0, size=(512, 512)), dtype=np.float32)
+
+    full = DepthAlphaSegmenter(
+        low_pct=5.0, high_pct=95.0, morphology_kernel=0, percentile_scale=1.0
+    )
+    sampled = DepthAlphaSegmenter(
+        low_pct=5.0, high_pct=95.0, morphology_kernel=0, percentile_scale=0.25
+    )
+    alpha_full = full.relative_to_alpha(depth)
+    alpha_sampled = sampled.relative_to_alpha(depth)
+    assert alpha_full.shape == alpha_sampled.shape
+    assert int(np.abs(alpha_full.astype(np.int16) - alpha_sampled.astype(np.int16)).max()) <= 2
+
+
+def test_percentile_scale_rejects_out_of_range() -> None:
+    with pytest.raises(ValueError, match="percentile_scale"):
+        DepthAlphaSegmenter(percentile_scale=0.0)
+    with pytest.raises(ValueError, match="percentile_scale"):
+        DepthAlphaSegmenter(percentile_scale=1.5)

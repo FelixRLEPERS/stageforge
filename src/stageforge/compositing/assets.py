@@ -111,9 +111,12 @@ def _placeholder(
     y0 = min(max(0, centre_y - box_height // 2), max(0, height - box_height))
     x1, y1 = x0 + box_width, y0 + box_height
 
-    overlay = target.copy()
-    cv2.rectangle(overlay, (x0, y0), (x1, y1), (0, 220, 0), -1)
-    target[:] = cv2.addWeighted(overlay, 0.25, target, 0.75, 0)
+    # Fill only the box, not the whole raster: the addWeighted blend on
+    # the full frame cost ~9 ms per placeholder at 1080p.
+    box = target[y0:y1, x0:x1]
+    overlay = box.copy()
+    cv2.rectangle(overlay, (0, 0), (x1 - x0, y1 - y0), (0, 220, 0), -1)
+    box[:] = cv2.addWeighted(overlay, 0.25, box, 0.75, 0)
     cv2.rectangle(target, (x0, y0), (x1, y1), (0, 255, 0), 3)
     cv2.putText(
         target,

@@ -63,6 +63,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `transformers`, `timm`, `NDIlib`) and `loguru`, all of which may be
   absent from CI.
 
+### Performance
+
+Second implementation pass: the pipeline was profiled per stage with
+`scripts/profile_pipeline.py` (new) and cut to the 33 ms / 1080p30
+frame budget. Measured on the full 1920x1080 raster, synthetic mode:
+
+| stage | before | after |
+| --- | ---: | ---: |
+| `capture.read` (2 cams) | 10.2 ms | 3.8 ms |
+| `depth.predict` | 46.8 ms | 0.01 ms |
+| `segment` | 37.3 ms | 11.2 ms |
+| `composite` | 49.3 ms | 11.1 ms |
+| **TOTAL** | **~132 ms** | **26.2 ms** |
+
+- **Autocrop is now a real cache** (`capture/source.py`,
+  `capture/synthetic.py`): a `_detected_once` flag plus a
+  `_since_detect` counter replaced `frame_id % refresh == 0`, which on
+  a bar-free camera (the 5D Mark IV — the main scenario) left
+  `_rect is None` and re-ran `detect_bars` on **every** frame
+  (45.8 ms/frame of wasted CPU).
+- **`detect_bars` computes both brightness profiles once**
+  (`capture/crop.py`): `detect_pillarbox`/`detect_letterbox` still
+  compute their own profiles for direct callers, but the combined
+  detector feeds one `_profiles()` pass into both bounds checks —
+  two `np.mean` sweeps instead of four.
+- **Percentiles run on a downscaled copy** (`segmentation/depth_alpha.py`):
+  new `percentile_scale` (default `0.25`, wired through
+  `builder.py` and configurable under `segmentation.depth_alpha`)
+  samples 480x270 instead of 1920x1080 for `np.percentile`; normalise
+  and round are now in-place single-pass (`cv2.convertScaleAbs`).
+- **Background dimming uses saturating uint8 OpenCV ops**
+  (`compositing/simple2d.py::dim_background`): the task proposed int16
+  arithmetic, but measuring both showed int16 at 31 ms vs uint8 at
+  6.6 ms, and `diff * alpha` overflows int16 for `shade < 0.5`.
+  Kept `_dim_background_reference` (float32) for the equivalence test —
+  max deviation 1/255 at 1080p.
+- **Synthetic depth ramp is cached per raster**
+  (`reconstruction/synthetic.py`), and `radial_depth` builds from 1-D
+  coordinate vectors instead of `np.mgrid` (which allocated two int64
+  index grids, 23 MB, per frame).
+- **AR placeholder composites only its box**
+  (`compositing/assets.py`): the full-frame `copy` + `addWeighted`
+  (~9 ms) became a region-sized blend.
+- New `tests/test_compositing_simple2d.py`; autocrop cache and
+  single-pass profiles covered in `tests/test_capture_autocrop.py`;
+  percentile downsampling covered in `tests/test_segmentation_depth_alpha.py`.
+  The commit message says "int16 composite"; the shipped
+  implementation is the faster uint8 path described above.
+
 ### Decisions taken while scaffolding (MVP)
 
 - **MVP keys mirror the plan's schema instead of reusing the scaffold

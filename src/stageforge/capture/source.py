@@ -63,6 +63,8 @@ class UsbCameraSource(CaptureSource):
         self._cap: cv2.VideoCapture | None = None
         self._rect: Rect | None = None
         self._frame_id = 0
+        self._detected_once: bool = False
+        self._since_detect: int = 0
 
     @property
     def crop_rect(self) -> Rect | None:
@@ -136,12 +138,14 @@ class UsbCameraSource(CaptureSource):
         if not self._autocrop:
             return crop_to_aspect(raw, self._target_aspect)
 
-        due = self._rect is None or self._frame_id % self._refresh == 0
-        if due:
+        self._since_detect += 1
+        if not self._detected_once or self._since_detect >= self._refresh:
             detected = detect_bars(raw, threshold=self._autocrop_threshold)
             if detected != self._rect:
                 logger.info(f"autocrop updated: {self._name} {self._rect} -> {detected}")
             self._rect = detected
+            self._detected_once = True
+            self._since_detect = 0
 
         cropped = apply_crop(raw, self._rect) if self._rect is not None else raw
         return crop_to_aspect(cropped, self._target_aspect)

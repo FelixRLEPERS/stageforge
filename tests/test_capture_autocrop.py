@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
-from stageforge.capture.crop import (
-    apply_crop,
-    crop_to_aspect,
-    detect_bars,
-    detect_pillarbox,
-)
+import stageforge.capture.source as source_module
+import stageforge.capture.synthetic as synthetic_module
+from stageforge.capture.crop import apply_crop, crop_to_aspect, detect_bars, detect_pillarbox
+from stageforge.capture.source import UsbCameraSource
 from stageforge.capture.synthetic import SyntheticCameraSource
 
 
@@ -83,3 +82,98 @@ def test_camera_source_detects_5d_mk2_pattern() -> None:
         assert (frame.height, frame.width) == (1080, 1620)
     finally:
         source.close()
+
+
+def _count_detect_calls(monkeypatch: pytest.MonkeyPatch, frames: int, refresh: int) -> int:
+    """Read ``frames`` frames from a synthetic source, counting detect_bars."""
+    source = SyntheticCameraSource(pattern="plain", autocrop_refresh=refresh, target_aspect=None)
+    source.open()
+    calls = 0
+    original = synthetic_module.detect_bars
+
+    def counting_detect(*args: object, **kwargs: object) -> object:
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(synthetic_module, "detect_bars", counting_detect)
+    try:
+        for _ in range(frames):
+            source.read()
+    finally:
+        source.close()
+    return calls
+
+
+def test_autocrop_cache_no_bars(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A bar-free camera (5D Mark IV) must detect once, not every frame."""
+    assert _count_detect_calls(monkeypatch, frames=10, refresh=300) == 1
+
+
+def test_autocrop_cache_with_bars(monkeypatch: pytest.MonkeyPatch) -> None:
+    """With refresh=5, detection runs on frame 1 then every 5th frame."""
+    # frame 1 (first) + frames 6, 11 -> 3 detections over 12 frames.
+    assert _count_detect_calls(monkeypatch, frames=12, refresh=5) == 3
+
+
+class _FakeUvc:
+    """Stands in for ``cv2.VideoCapture`` on a machine with no capture card."""
+
+    def __init__(self, index: int) -> None:
+        self._index = index
+
+    def isOpened(self) -> bool:  # noqa: N802 - mirrors the OpenCV API
+        return True
+
+    def set(self, *_args: object, **_kwargs: object) -> bool:
+        return True
+
+    def read(self) -> tuple[bool, np.ndarray]:
+        return True, np.full((1080, 1920, 3), 120, dtype=np.uint8)
+
+    def release(self) -> None:
+        return None
+
+
+def test_autocrop_cache_usb_source_no_bars(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The USB path carries the same cache contract as the synthetic one."""
+    calls = 0
+    original = source_module.detect_bars
+
+    def counting_detect(*args: object, **kwargs: object) -> object:
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(source_module, "detect_bars", counting_detect)
+    monkeypatch.setattr(source_module.cv2, "VideoCapture", _FakeUvc)
+
+    source = UsbCameraSource(index=0, autocrop_refresh=300, target_aspect=None)
+    source.open()
+    try:
+        for _ in range(10):
+            source.read()
+    finally:
+        source.close()
+    assert calls == 1
+
+
+def test_detect_bars_profiles_called_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """detect_bars must compute _profiles once, not four np.mean passes."""
+    import stageforge.capture.crop as crop_module
+
+    calls = 0
+    original = crop_module._profiles
+
+    def counting_profiles(*args: object, **kwargs: object) -> object:
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(crop_module, "_profiles", counting_profiles)
+    detect_bars(_pillarbox_frame())
+    assert calls == 1
+
+    calls = 0
+    detect_bars(np.full((64, 64, 3), 120, dtype=np.uint8))
+    assert calls == 1

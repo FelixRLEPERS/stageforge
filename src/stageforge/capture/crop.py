@@ -42,6 +42,34 @@ def _profiles(
     return columns, rows
 
 
+def _pillarbox_bounds(
+    columns: npt.NDArray[np.float64],
+    height: int,
+    threshold: float,
+    min_content_ratio: float,
+) -> Rect | None:
+    """Pillarbox rect from a pre-computed column profile."""
+    bounds = _content_bounds(columns, threshold, min_content_ratio)
+    if bounds is None:
+        return None
+    x1, x2 = bounds
+    return (x1, 0, x2, height)
+
+
+def _letterbox_bounds(
+    rows: npt.NDArray[np.float64],
+    width: int,
+    threshold: float,
+    min_content_ratio: float,
+) -> Rect | None:
+    """Letterbox rect from a pre-computed row profile."""
+    bounds = _content_bounds(rows, threshold, min_content_ratio)
+    if bounds is None:
+        return None
+    y1, y2 = bounds
+    return (0, y1, width, y2)
+
+
 def _content_bounds(
     profile: npt.NDArray[np.float64],
     threshold: float,
@@ -67,11 +95,7 @@ def detect_pillarbox(
 ) -> Rect | None:
     """Content box ``(x1, y1, x2, y2)`` after vertical bars, or ``None``."""
     columns, _ = _profiles(frame)
-    bounds = _content_bounds(columns, threshold, min_content_ratio)
-    if bounds is None:
-        return None
-    x1, x2 = bounds
-    return (x1, 0, x2, frame.shape[0])
+    return _pillarbox_bounds(columns, frame.shape[0], threshold, min_content_ratio)
 
 
 def detect_letterbox(
@@ -81,11 +105,7 @@ def detect_letterbox(
 ) -> Rect | None:
     """Content box after horizontal bars, or ``None``."""
     _, rows = _profiles(frame)
-    bounds = _content_bounds(rows, threshold, min_content_ratio)
-    if bounds is None:
-        return None
-    y1, y2 = bounds
-    return (0, y1, frame.shape[1], y2)
+    return _letterbox_bounds(rows, frame.shape[1], threshold, min_content_ratio)
 
 
 def detect_bars(
@@ -93,9 +113,15 @@ def detect_bars(
     threshold: int = 10,
     min_content_ratio: float = 0.5,
 ) -> Rect | None:
-    """Intersection of pillarbox and letterbox; ``None`` if nothing found."""
-    vertical = detect_pillarbox(frame, threshold, min_content_ratio)
-    horizontal = detect_letterbox(frame, threshold, min_content_ratio)
+    """Intersection of pillarbox and letterbox; ``None`` if nothing found.
+
+    Both profiles are computed once and fed to both detectors, so the
+    cost is two ``np.mean`` passes over the frame instead of four.
+    """
+    columns, rows = _profiles(frame)
+    vertical = _pillarbox_bounds(columns, frame.shape[0], threshold, min_content_ratio)
+    horizontal = _letterbox_bounds(rows, frame.shape[1], threshold, min_content_ratio)
+
     if vertical is None and horizontal is None:
         return None
     if vertical is None:
