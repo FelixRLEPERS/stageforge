@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "image": {
+        "type": "local",
+        "command": ["python", "G:\\stageforge\\tools\\image_mcp.py"]
+      }
+    }
+  }
+}

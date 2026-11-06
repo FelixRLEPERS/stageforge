@@ -22,6 +22,9 @@ site/
 # Pipeline run output (FileOutputSink)
 out/
 
+# Generated media (tools/image_mcp.py writes here)
+assets/generated/
+
 # Unreal / binaries
 *.uasset
 *.umap
