@@ -56,3 +56,5 @@ Thumbs.db
 .env
 *.local.yaml
 models/
+
+tools/image_mcp.py
