@@ -1,0 +1,40 @@
+# Development configuration.
+# Every layer is a stub: this file runs without any hardware attached.
+# Copy prod.example.yaml and adapt for a real studio.
+
+cameras:
+  - id: cam_a
+    transport: ndi
+    source: "STUDIO-A/CAM1"
+    frame_rate: 50
+    resolution: [1920, 1080]
+
+depth:
+  provider: none          # tof | stereo | sfm | none
+  device: ""
+  max_range_m: 6.0
+
+tracker:
+  protocol: none          # freed | none
+  endpoint: ""
+  calibration: ""
+
+segmenter:
+  engine: depth           # depth | ai
+  threshold_m: 2.4
+  feather_px: 2
+
+compositor:
+  engine: none            # unreal | none
+  bridge: direct          # aximmetry | zerodensity | mosys | direct
+  fallback: pass_through  # fail_air | pass_through
+
+output:
+  sink: null              # sdi | ndi | null
+  device: 0
+  scan_mode: 1080i50
+  key_level: 1.0
+
+logging:
+  level: debug
+  json: false

@@ -1,0 +1,58 @@
+# StageForge
+
+**Автоматическая виртуальная студия с AR-композитингом в реальном времени.**
+
+[![CI](https://github.com/stageforge/stageforge/actions/workflows/ci.yml/badge.svg)](https://github.com/stageforge/stageforge/actions/workflows/ci.yml)
+[![Docs](https://github.com/stageforge/stageforge/actions/workflows/docs.yml/badge.svg)](https://github.com/stageforge/stageforge/actions/workflows/docs.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
+
+StageForge превращает обычную многокамерную студию в полностью
+автоматизированную виртуальную среду: камеры восстанавливают
+3D-геометрию площадки, пайплайн строит чистый альфа-канал без
+хромакея, а AR-контент композитится в реальном времени и уходит в эфир
+по SDI Key/Fill или NDI.
+
+## Зачем это нужно
+
+- Не нужен зелёный фон (хромакей).
+- Не нужна ручная калибровка камер перед каждым эфиром.
+- AR-контент автоматически привязывается к теме комментария диктора.
+- Работает с уже имеющимся эфирным оборудованием.
+
+## Архитектура (5 слоёв)
+
+1. Захват (SDI/NDI + генлок)
+2. Реконструкция и трекинг (SfM, ToF, Free-D)
+3. Сегментация и альфа (AI-ключер / на основе глубины)
+4. Композитинг и AR (мост к Unreal Engine 5)
+5. Вывод (SDI Key/Fill, NDI)
+
+Смотрите [docs/02-architecture.md](docs/02-architecture.md).
+
+## Статус
+
+🚧 Преп-MVP каркас. См. [docs/11-roadmap.md](docs/11-roadmap.md).
+
+## Быстрый старт
+
+```bash
+git clone https://github.com/stageforge/stageforge.git
+cd stageforge
+./scripts/bootstrap.sh      # или .\scripts\bootstrap.ps1 в Windows
+make test
+```
+
+## Документация
+
+Вся документация — в каталоге [`docs/`](docs/00-index.md).
+Английский оригинал: [`README.md`](README.md).
+
+## Участие в разработке
+
+См. [CONTRIBUTING.md](CONTRIBUTING.md). Участвуя в проекте, вы
+соглашаетесь с [Кодексом поведения](CODE_OF_CONDUCT.md).
+
+## Лицензия
+
+Apache License 2.0 — см. [LICENSE](LICENSE).

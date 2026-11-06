@@ -1,0 +1,45 @@
+site_name: StageForge
+site_description: Automatic virtual studio with real-time AR compositing.
+site_url: https://stageforge.github.io/stageforge/
+repo_url: https://github.com/stageforge/stageforge
+repo_name: stageforge/stageforge
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 StageForge Contributors
+
+# Only themes/extensions bundled with mkdocs are used, so a plain
+# `pip install mkdocs` (the documented dev dependency) is enough.
+theme:
+  name: readthedocs
+  highlightjs: true
+
+nav:
+  - Home: 00-index.md
+  - Getting started: 01-getting-started.md
+  - Architecture:
+      - Overview: 02-architecture.md
+      - "L1 Capture": 03-capture.md
+      - "L2 Reconstruction & tracking": 04-reconstruction-tracking.md
+      - "L3 Segmentation & alpha": 05-segmentation-alpha.md
+      - "L4 Compositing & AR": 06-compositing-ar.md
+      - "L5 Output & delivery": 07-output-delivery.md
+      - Integrations: 08-integrations.md
+  - Reference:
+      - Configuration: 09-configuration.md
+      - Development: 10-development.md
+      - Roadmap: 11-roadmap.md
+  - Architecture decisions:
+      - Process: adr/README.md
+      - ADR 0001: adr/0001-record-architecture-decisions.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - fenced_code
+
+plugins:
+  - search
+
+strict: true

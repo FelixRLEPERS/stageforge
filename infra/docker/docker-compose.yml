@@ -1,0 +1,30 @@
+services:
+  stageforge:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    image: stageforge:local
+    container_name: stageforge
+    restart: unless-stopped
+    environment:
+      STAGEFORGE_CONFIG: /app/configs/dev.yaml
+      STAGEFORGE_LOG_LEVEL: ${STAGEFORGE_LOG_LEVEL:-info}
+      STAGEFORGE_FAKE_INPUT: ${STAGEFORGE_FAKE_INPUT:-1}
+    volumes:
+      - ../../configs:/app/configs:ro
+      - ../../assets:/app/assets:ro
+    # Uncomment once the NDI/DeckLink stubs are replaced by real drivers:
+    # devices:
+    #   - /dev/dri:/dev/dri
+    # privileged: true
+    networks:
+      - stageforge-net
+    healthcheck:
+      test: ["CMD", "python", "-m", "stageforge.orchestrator", "--help"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  stageforge-net:
+    driver: bridge

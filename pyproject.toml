@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stageforge"
+version = "0.1.0"
+description = "Automatic virtual studio with real-time AR compositing."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [{ name = "StageForge Contributors" }]
+keywords = ["broadcast", "virtual-studio", "ar", "ndi", "sdi", "freed"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Multimedia :: Video",
+]
+dependencies = [
+  "numpy",
+  "opencv-python",
+  "pydantic",
+  "pyyaml",
+  "loguru",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "ruff",
+  "mypy",
+  "pre-commit",
+  "mkdocs",
+]
+
+[project.urls]
+Homepage = "https://github.com/stageforge/stageforge"
+Documentation = "https://github.com/stageforge/stageforge/blob/main/docs/00-index.md"
+Changelog = "https://github.com/stageforge/stageforge/blob/main/CHANGELOG.md"
+Issues = "https://github.com/stageforge/stageforge/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+stageforge = ["py.typed"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["stageforge"]
+
+[tool.mypy]
+# No explicit python_version: mypy must use the interpreter it runs on,
+# otherwise stdlib stubs pinned to a newer numpy would be rejected.
+strict = true
+packages = ["stageforge"]
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

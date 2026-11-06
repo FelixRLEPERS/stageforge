@@ -1,0 +1,53 @@
+# Production template — copy to configs/prod.local.yaml (gitignored)
+# and fill in the real device identifiers before a show.
+
+cameras:
+  - id: cam_a
+    transport: sdi
+    source: "decklink0:0"
+    frame_rate: 50
+    resolution: [1920, 1080]
+  - id: cam_b
+    transport: ndi
+    source: "STUDIO-A/CAM2"
+    frame_rate: 50
+    resolution: [1920, 1080]
+
+depth:
+  provider: tof           # tof | stereo | sfm | none
+  device: "TOF-01"
+  max_range_m: 6.0
+  calibration: configs/tof01_calib.json
+
+tracker:
+  protocol: freed         # freed | none
+  endpoint: "udp://10.0.0.12:5600"
+  calibration: configs/cam_a_calib.json
+
+segmenter:
+  engine: depth           # depth | ai
+  threshold_m: 2.4
+  feather_px: 2
+  hold_frames: 3
+
+compositor:
+  engine: unreal          # unreal | none
+  bridge: aximmetry       # aximmetry | zerodensity | mosys | direct
+  endpoint: "tcp://10.0.0.20:30000"
+  fallback: pass_through  # fail_air | pass_through
+
+output:
+  sink: sdi               # sdi | ndi | null
+  device: 0
+  scan_mode: 1080i50
+  key_level: 1.0
+  spare_device: 1         # hot-spare fill/key pair
+
+storylink:
+  rules: configs/storylink.yaml
+  strict: false
+
+logging:
+  level: info
+  json: true
+  file: logs/stageforge.log

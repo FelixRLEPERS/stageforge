@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: lint & test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package with dev extras
+        run: python -m pip install -e ".[dev]"
+
+      - name: Ruff lint
+        run: ruff check src tests scripts
+
+      - name: Ruff format check
+        run: ruff format --check src tests scripts
+
+      - name: Mypy
+        run: mypy src
+
+      - name: Pytest
+        run: pytest -q
+
+      - name: Verify repository line endings
+        run: |
+          bad="$(git ls-files --eol | grep -E 'i/(crlf|mixed)' || true)"
+          if [ -n "$bad" ]; then
+            echo "Non-LF line endings detected:"
+            echo "$bad"
+            exit 1
+          fi

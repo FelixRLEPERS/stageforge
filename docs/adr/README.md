@@ -1,0 +1,74 @@
+# Architecture Decision Records (ADR)
+
+An ADR captures **one** significant decision, its context and its
+consequences. ADRs are immutable once merged: if a decision changes,
+add a new ADR that supersedes the old one and mark the old file with a
+link.
+
+We follow [MADR](https://adr.github.io/madr/) 2.1 — the same shape used
+by the original example: **Context / Decision / Consequences**.
+
+## When you need an ADR
+
+Write one when you change:
+
+- a layer contract or the data types in `core/types.py`;
+- a dependency that becomes part of the public surface;
+- a protocol (Free-D, NDI, MOS) or a vendor integration strategy;
+- the latency, colour or frame-rate budget;
+- repository layout or the release process.
+
+Skip ADRs for bug fixes, refactors that preserve behaviour, docs and
+tooling tweaks.
+
+## File naming
+
+```
+docs/adr/NNNN-short-kebab-title.md
+```
+
+`NNNN` is a zero-padded, ever-increasing counter. Example:
+`0002-use-ndi-for-the-first-capture-source.md`.
+
+## Template
+
+```markdown
+# NNNN. Title
+
+Date: YYYY-MM-DD
+
+## Status
+
+Proposed | Accepted | Superseded by NNNN | Deprecated
+
+## Context
+
+What is the issue that motivates this decision? What forces are at
+play (technical, broadcast, commercial)?
+
+## Decision
+
+What was decided, stated as "We will …".
+
+## Consequences
+
+### Positive
+- …
+
+### Negative / risks
+- …
+```
+
+## Workflow
+
+1. Open a pull request that adds only the ADR (plus a link from
+   `docs/00-index.md` if it deserves visibility).
+2. Review focuses on whether the *context* is honest, not on whether we
+   like the decision.
+3. Merge together with the code that implements it.
+
+## Index
+
+| ADR | Title | Status |
+|-----|-------|--------|
+| [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |

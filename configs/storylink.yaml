@@ -1,0 +1,40 @@
+# Story-Link rule table: rundown cue -> AR assets.
+# First matching rule wins; order matters.
+#
+# match.topic     exact topic slug from the newsroom system
+# match.keyword   case-insensitive substring of title/keywords
+# asset           id of an entry in the AR asset library
+# anchor          named stage position (see compositor config)
+# animation       optional entrance animation name
+
+rules:
+  - match: { topic: oil }
+    asset: barrel_stack_v3
+    anchor: stage_left
+    animation: rise
+
+  - match: { topic: markets }
+    asset: index_board_live
+    anchor: stage_right
+    animation: fade
+
+  - match: { keyword: "interest rate" }
+    asset: rate_chart_live
+    anchor: desk_right
+    animation: rise
+
+  - match: { keyword: election }
+    asset: ballot_map_2d
+    anchor: backdrop
+    animation: slide
+
+  - match: { keyword: weather }
+    asset: forecast_panel
+    anchor: stage_right
+    animation: fade
+
+  # Fallback: generic brand loop. Always keep this last.
+  - match: { topic: "*" }
+    asset: brand_loop_idle
+    anchor: backdrop
+    animation: none

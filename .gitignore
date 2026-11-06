@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Node / web
+node_modules/
+dist/
+build/
+
+# Documentation build output
+site/
+
+# Unreal / binaries
+*.uasset
+*.umap
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+
+# Video / heavy assets
+*.mp4
+*.mov
+*.mkv
+*.bag
+*.pcd
+*.ply
+assets/sample-data/*
+!assets/sample-data/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+*.local.yaml
