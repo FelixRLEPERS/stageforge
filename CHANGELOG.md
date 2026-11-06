@@ -209,6 +209,28 @@ frame budget. Measured on the full 1920x1080 raster, synthetic mode:
     for runs, PNG → lossless-but-cheaper encode or file sink behind a
     `--frames` dry profile.
 
+### Measured (ML backends, 2026-11-06)
+
+Canonical table for the pitch deck (accepted rounded numbers; per-run
+min/max/p95 detail is in the table above):
+
+| backend           | avg ms | budget 33 ms |
+| ----------------- | -----: | ------------ |
+| transformers fp32 |   52.5 | FAIL         |
+| transformers fp16 |   35.5 | FAIL (best)  |
+| onnx CUDA         |   47.3 | FAIL         |
+| torch.compile     |    n/a | Windows fail |
+
+Facts verified by measurement (not hypotheses):
+
+- `processor.image_mean = (0.485, 0.456, 0.406)` — ImageNet, not
+  `[0.5, 0.5, 0.5]`.
+- `predicted_depth.shape = (1, 518, 924)` — no extra singleton axis.
+- fp16 is 12 ms faster than ONNX at the same budget.
+
+Decision: default backend = fp16 (fastest available). ONNX stays an
+opt-in via `backend="onnx"` in config.
+
 ### Decisions taken while scaffolding (MVP)
 
 - **MVP keys mirror the plan's schema instead of reusing the scaffold
