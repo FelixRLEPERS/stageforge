@@ -137,6 +137,7 @@ def _build_depth(mode: str, config: Mapping[str, Any]) -> DepthProvider:
         near_is_high=bool(monocular.get("near_is_high", True)),
         backend=str(monocular.get("backend", "transformers")),
         onnx_path=str(monocular.get("onnx_path", DEFAULT_ONNX_PATH)),
+        precision=str(monocular.get("precision", "fp16")),
     )
 
 

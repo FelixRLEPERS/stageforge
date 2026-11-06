@@ -1,12 +1,8 @@
 """Monocular depth for rigs that own no depth sensor.
 
-Depth Anything V2 Small predicts a *relative* depth map from a single
-RGB frame: it orders surfaces near-to-far but carries no metric scale
-(ADR 0002). Everything downstream therefore works in ``[0, 1]`` and the
-conversion to an alpha mask happens in L3.
-
-Dependencies live in the ``[ml]`` extra and are imported lazily, so the
-rest of the package — and CI — stays importable without torch.
+Depth Anything V2 Small predicts a *relative* depth map (ADR 0002):
+near-to-far, no metric scale, ``[0, 1]`` downstream, L3 -> alpha mask,
+``[ml]`` extras import lazily (CI-safe without torch).
 """
 
 from __future__ import annotations
@@ -40,11 +36,9 @@ __all__ = [
 class MonocularDepthProvider(DepthProvider):
     """Runs Depth Anything V2 on each frame and normalises the result.
 
-    ``near_is_high`` records the model's native polarity: Depth Anything
-    emits larger values for nearer surfaces, so the default inverts the
-    normalised output to satisfy the package-wide convention
-    ``0 = nearest, 1 = farthest``. Flip it in config if a different
-    checkpoint is used.
+    ``near_is_high`` records native polarity (larger = nearer), so the
+    default inverts output to the package convention ``0 = nearest,
+    1 = farthest``. Flip it in config for a different checkpoint.
     """
 
     def __init__(
@@ -54,14 +48,18 @@ class MonocularDepthProvider(DepthProvider):
         near_is_high: bool = True,
         backend: str = "transformers",
         onnx_path: str = DEFAULT_ONNX_PATH,
+        precision: str = "fp16",
     ) -> None:
         if backend not in BACKENDS:
             raise ValueError(f"unknown backend {backend!r}, expected one of {BACKENDS}")
+        if precision not in ("fp16", "fp32"):
+            raise ValueError(f"unknown precision {precision!r}, expected 'fp16' or 'fp32'")
         self._device = device
         self._model_id = model_id
         self._near_is_high = near_is_high
         self._backend = backend
         self._onnx_path = onnx_path
+        self._precision = precision
         self._processor: Any = None
         self._model: Any = None
         self._session: Any = None
@@ -76,6 +74,11 @@ class MonocularDepthProvider(DepthProvider):
     def backend(self) -> str:
         """Which inference path this provider was built for."""
         return self._backend
+
+    @property
+    def precision(self) -> str:
+        """Weights precision for the transformers path (ONNX is fixed at export)."""
+        return self._precision
 
     @property
     def runtime_device(self) -> str:
@@ -133,8 +136,11 @@ class MonocularDepthProvider(DepthProvider):
         device = self._device
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
-        logger.info(f"loading depth model {self._model_id} on device={device}")
-        self._model = AutoModelForDepthEstimation.from_pretrained(self._model_id).to(device).eval()
+        if self._precision == "fp16" and device != "cuda":
+            raise RuntimeError("fp16 requires CUDA; use fp32 on CPU")
+        logger.info(f"loading depth {self._model_id} device={device} precision={self._precision}")
+        model = AutoModelForDepthEstimation.from_pretrained(self._model_id).to(device).eval()
+        self._model = model.half() if self._precision == "fp16" else model
         self._runtime_device = device
 
     def _load_onnx(self) -> None:
@@ -158,6 +164,8 @@ class MonocularDepthProvider(DepthProvider):
 
         batch = self._processor(images=rgb, return_tensors="pt")
         batch = {name: tensor.to(self._runtime_device) for name, tensor in batch.items()}
+        if self._precision == "fp16":
+            batch = {name: (t.half() if t.is_floating_point() else t) for name, t in batch.items()}
 
         with torch.no_grad():
             outputs = self._model(**batch)
@@ -175,9 +183,8 @@ class MonocularDepthProvider(DepthProvider):
     ) -> npt.NDArray[np.float32]:
         """onnxruntime path — same processor preprocessing, same contract.
 
-        The exported graph emits ``(1, h, w)`` (verified by
-        ``scripts/export_depth_onnx.py``), so ``tensor[0]`` is the 2-D map;
-        NaN/Inf from a degenerate graph are zeroed before normalisation.
+        ``scripts/export_depth_onnx.py`` verified the graph emits
+        ``(1, h, w)`` — ``tensor[0]`` is the 2-D map; NaN/Inf are zeroed first.
         """
         import cv2
 

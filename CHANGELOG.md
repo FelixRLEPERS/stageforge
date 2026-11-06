@@ -187,10 +187,10 @@ frame budget. Measured on the full 1920x1080 raster, synthetic mode:
     gitignored `models/`).
   - The released transformer path (fp32) goes **52.07 → 47.29 ms** on
     the ONNX backend. Best available remains transformers fp16 at
-    34.4 ms — budget 33 ms is still **FAIL by ~1.4 ms**; fp16 was
-    measured, not shipped (scenario D's prescription). Proposed next
-    steps (not implemented): fp16 ONNX export, moving the bicubic
-    upsample onto the GPU path.
+    34.4 ms — budget 33 ms is still **FAIL by ~1.4 ms**; fp16 has since
+    become the shipped default (next bullet), ONNX stays opt-in.
+    Proposed next steps (not implemented): fp16 ONNX export, moving the
+    bicubic upsample onto the GPU path.
   - The first onnx run printed avg 119.6 / max 1367.6 ms: the
     benchmark's local `model` variable held a second reference, so the
     "free between rows" cleanup did not actually release the torch
@@ -208,6 +208,17 @@ frame budget. Measured on the full 1920x1080 raster, synthetic mode:
     async capture queue to hide the device pacing, `logging.level: info`
     for runs, PNG → lossless-but-cheaper encode or file sink behind a
     `--frames` dry profile.
+- **Default backend switched to fp16 (35.5 ms vs ONNX 47.3 ms).**
+  `MonocularDepthProvider` gained `precision` (default `"fp16"`),
+  wired through `builder.py` and `reconstruction.monocular.precision`
+  in `configs/dev.yaml` / `configs/dev_single.yaml`; the transformers
+  path loads weights and inputs as half. No CUDA (or an explicit
+  `device: "cpu"`) raises `RuntimeError("fp16 requires CUDA; use fp32
+  on CPU")` instead of failing inside `half()`; unknown precision
+  values raise `ValueError` at the constructor like unknown backends.
+  ONNX remains an opt-in via `backend="onnx"` — its graph precision is
+  fixed at export, so `precision` applies to the transformers path
+  only. Both existing CPU tests pin `precision="fp32"` explicitly.
 
 ### Measured (ML backends, 2026-11-06)
 

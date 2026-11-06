@@ -44,7 +44,7 @@ requires_onnx = pytest.mark.skipif(not _has_onnx(), reason="requires [ml,onnx-gp
 
 @requires_ml
 def test_predict_shape_and_range() -> None:
-    provider = MonocularDepthProvider(device="cpu")
+    provider = MonocularDepthProvider(device="cpu", precision="fp32")
     provider.calibrate()
     frame = Frame(
         timestamp_us=1,
@@ -89,11 +89,25 @@ def test_provider_starts_unloaded() -> None:
     assert provider.is_ready is False
     assert provider.model_id == "some/other-checkpoint"
     assert provider.runtime_device == "cpu"
+    assert provider.precision == "fp16"  # fastest available ships as default
 
 
 def test_unknown_backend_is_rejected() -> None:
     with pytest.raises(ValueError, match="backend"):
         MonocularDepthProvider(backend="tensorrt")
+
+
+def test_unknown_precision_is_rejected() -> None:
+    with pytest.raises(ValueError, match="precision"):
+        MonocularDepthProvider(precision="bf16")
+
+
+@requires_ml
+def test_fp16_requires_cuda() -> None:
+    """fp16 without a CUDA device must say so instead of failing in half()."""
+    provider = MonocularDepthProvider(device="cpu", precision="fp16")
+    with pytest.raises(RuntimeError, match="fp16 requires CUDA"):
+        provider.calibrate()
 
 
 def test_onnx_missing_model_points_at_export_script() -> None:
@@ -141,7 +155,11 @@ def test_onnx_backend_matches_transformers() -> None:
         data=rng.integers(0, 255, (518, 924, 3), dtype=np.uint8),
     )
     onnx_depth = MonocularDepthProvider(backend="onnx").depth_for(frame).data
-    hf_depth = MonocularDepthProvider(backend="transformers", device="cpu").depth_for(frame).data
+    hf_depth = (
+        MonocularDepthProvider(backend="transformers", device="cpu", precision="fp32")
+        .depth_for(frame)
+        .data
+    )
     assert onnx_depth.shape == hf_depth.shape
     # Both are min-max normalised to [0, 1], so 5 % of the range is the bar.
     difference = float(np.abs(onnx_depth - hf_depth).max())
