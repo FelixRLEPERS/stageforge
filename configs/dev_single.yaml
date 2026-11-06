@@ -1,0 +1,62 @@
+# Single-camera dev run — same schema as dev.yaml, only the camera block
+# differs. On the bench only the index-1 UVC device delivers frames; the
+# index-0 device opens but never produces one, and the two-camera wrapper
+# then ends the run with "device stopped delivering frames" (see
+# src/stageforge/capture/source.py). Use this config to measure a real
+# single-camera pipeline: read logs of capture/depth/autocrop/TOTAL.
+
+# "monocular" = real USB camera + Depth Anything V2   (requires .[ml])
+# "synthetic" = generated frames, no hardware, no torch (dry runs, CI)
+mode: monocular
+
+camera:
+  num_cameras: 1
+  max_skew: 2
+  cameras:
+    - name: "5D Mark II (ML)"
+      source: 1
+      autocrop:
+        enabled: true          # crops the 1620x1080 pillarbox of the 5D II
+        threshold: 10
+        refresh_interval: 300
+        target_aspect: "16:9"
+  width: 1920
+  height: 1080
+  fps: 30
+  synthetic:
+    pattern: "pillarbox"       # plain | bars | pillarbox
+
+reconstruction:
+  monocular:
+    device: "auto"             # auto | cuda | cpu
+    model_id: "depth-anything/Depth-Anything-V2-Small-hf"
+    near_is_high: true         # model polarity; output is normalised to 0=near
+
+segmentation:
+  depth_alpha:
+    low_pct: 5.0               # nearest percentiles fully keyed
+    high_pct: 95.0             # farthest percentiles fully clear
+    morphology_kernel: 3       # odd; 0 or 1 disables morphology
+    invert: true               # low depth = foreground (255)
+
+compositing:
+  mode: "2d"
+  topic: "military_tech"       # key into configs/storylink.yaml
+  background_shade: 0.55       # brightness the keyed-out background keeps
+
+output:
+  mode: "file"                 # file | ndi | null
+  out_dir: "out"
+  ndi_name: "StageForge Preview"
+  sink: null                   # scaffold contract: sdi | ndi | null
+  device: 0
+  scan_mode: 1080i50
+  key_level: 1.0
+
+storylink:
+  rules: "configs/storylink.yaml"
+  strict: false
+
+logging:
+  level: debug
+  json: false

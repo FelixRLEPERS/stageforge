@@ -43,6 +43,22 @@ cd stageforge
 make test
 ```
 
+### ML extras on a CUDA machine
+
+`[ml]` declares `torch>=2.0`, and pip resolves that to the **CPU wheel**
+from PyPI — silently replacing a CUDA-enabled torch. Install torch from
+the PyTorch index first, then StageForge without dependency resolution:
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+pip install -e ".[ml]" --no-deps
+pip install transformers timm
+```
+
+(CPU-only machines can just run `pip install -e ".[ml]"`.) For the ONNX
+depth backend add `pip install -e ".[onnx-gpu]"` — or `".[onnx]"` for CPU
+— and export the model once with `python scripts/export_depth_onnx.py`.
+
 ## Documentation
 
 All documentation lives in [`docs/`](docs/00-index.md). Russian

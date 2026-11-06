@@ -37,6 +37,9 @@ dev = [
 ]
 # Heavy / SDK-bound extras: never pulled in by `pip install stageforge`.
 # The pipeline imports them lazily and explains what is missing.
+# NOTE: on a CUDA machine install torch first (see README "Install with
+# CUDA") — `pip install -e ".[ml]"` resolves torch>=2.0 to the CPU wheel
+# from PyPI and would silently replace a CUDA build.
 ml = [
   "torch>=2.0",
   "torchvision",
@@ -45,6 +48,17 @@ ml = [
 ]
 ndi = [
   "ndi-python",
+]
+# ONNX runtime for the monocular depth backend: export once with
+# scripts/export_depth_onnx.py, then select backend: onnx (ADR-worthy
+# only if the default ever changes; today it is an opt-in).
+onnx = [
+  "onnxruntime>=1.16",
+  "onnx",
+]
+onnx-gpu = [
+  "onnxruntime-gpu>=1.16",
+  "onnx",
 ]
 
 [project.urls]
@@ -78,7 +92,8 @@ strict = true
 packages = ["stageforge"]
 mypy_path = "src"
 
-# Optional extras ([ml], [ndi]) and loguru are legitimately absent from a
+# Optional extras ([ml], [ndi], [onnx-gpu]) and loguru are legitimately
+# absent from a
 # bare environment and from the CI matrix; their imports are guarded at
 # runtime, so stubs must not be required to type-check them.
 [[tool.mypy.overrides]]
@@ -95,6 +110,8 @@ module = [
   "timm.*",
   "NDIlib",
   "NDIlib.*",
+  "onnxruntime",
+  "onnxruntime.*",
 ]
 ignore_missing_imports = true
 

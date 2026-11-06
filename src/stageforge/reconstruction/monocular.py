@@ -19,11 +19,22 @@ import numpy.typing as npt
 from stageforge.core.log import logger
 from stageforge.core.types import Frame, RelativeDepthFrame
 from stageforge.reconstruction.base import DepthProvider
+from stageforge.reconstruction.depth_norm import normalise_depth
+from stageforge.reconstruction.onnx_support import open_onnx_session
 
 DEFAULT_MODEL_ID = "depth-anything/Depth-Anything-V2-Small-hf"
+DEFAULT_ONNX_PATH = "models/depth_anything_v2_small.onnx"
 ML_HINT = "monocular depth requires [ml] extras: pip install -e .[ml]"
+BACKENDS = ("onnx", "transformers")
 
-__all__ = ["DEFAULT_MODEL_ID", "ML_HINT", "MonocularDepthProvider"]
+__all__ = [
+    "BACKENDS",
+    "DEFAULT_MODEL_ID",
+    "DEFAULT_ONNX_PATH",
+    "ML_HINT",
+    "MonocularDepthProvider",
+    "normalise_depth",
+]
 
 
 class MonocularDepthProvider(DepthProvider):
@@ -41,18 +52,30 @@ class MonocularDepthProvider(DepthProvider):
         device: str = "auto",
         model_id: str = DEFAULT_MODEL_ID,
         near_is_high: bool = True,
+        backend: str = "transformers",
+        onnx_path: str = DEFAULT_ONNX_PATH,
     ) -> None:
+        if backend not in BACKENDS:
+            raise ValueError(f"unknown backend {backend!r}, expected one of {BACKENDS}")
         self._device = device
         self._model_id = model_id
         self._near_is_high = near_is_high
+        self._backend = backend
+        self._onnx_path = onnx_path
         self._processor: Any = None
         self._model: Any = None
+        self._session: Any = None
         self._runtime_device = "cpu"
 
     @property
     def is_ready(self) -> bool:
-        """True once the weights have been loaded."""
-        return self._model is not None
+        """True once the weights (or the ONNX session) have been loaded."""
+        return self._model is not None or self._session is not None
+
+    @property
+    def backend(self) -> str:
+        """Which inference path this provider was built for."""
+        return self._backend
 
     @property
     def runtime_device(self) -> str:
@@ -87,11 +110,23 @@ class MonocularDepthProvider(DepthProvider):
 
     def _load(self) -> None:
         """Import the ``[ml]`` extras and load the model exactly once."""
-        if self._model is not None:
+        if self._model is not None or self._session is not None:
             return
         try:
+            from transformers import AutoImageProcessor
+        except ImportError as exc:
+            raise RuntimeError(ML_HINT) from exc
+        # transformers 5.x leaves this factory untyped (decorator-generated).
+        self._processor = AutoImageProcessor.from_pretrained(  # type: ignore[no-untyped-call]
+            self._model_id
+        )
+        if self._backend == "onnx":
+            self._load_onnx()
+            return
+
+        try:
             import torch
-            from transformers import AutoImageProcessor, AutoModelForDepthEstimation
+            from transformers import AutoModelForDepthEstimation
         except ImportError as exc:
             raise RuntimeError(ML_HINT) from exc
 
@@ -99,17 +134,28 @@ class MonocularDepthProvider(DepthProvider):
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info(f"loading depth model {self._model_id} on device={device}")
-        self._processor = AutoImageProcessor.from_pretrained(self._model_id)
         self._model = AutoModelForDepthEstimation.from_pretrained(self._model_id).to(device).eval()
         self._runtime_device = device
 
+    def _load_onnx(self) -> None:
+        """Open the exported graph; extras, file and DLL quirks explain themselves."""
+        self._session, self._runtime_device = open_onnx_session(self._onnx_path)
+
     def _infer(self, image: npt.NDArray[np.uint8]) -> npt.NDArray[np.float32]:
         """BGR frame -> normalised ``[0, 1]`` depth at the same resolution."""
+        height, width = image.shape[:2]
+        rgb = np.ascontiguousarray(image[..., ::-1])  # OpenCV is BGR
+        if self._backend == "onnx":
+            raw = self._infer_onnx(rgb, height, width)
+        else:
+            raw = self._infer_transformers(rgb, height, width)
+        return normalise_depth(raw, near_is_high=self._near_is_high)
+
+    def _infer_transformers(self, rgb: npt.NDArray[np.uint8], height: int, width: int) -> Any:
+        """HF path: predict at the processor grid, bicubic up to the frame."""
         import torch
         import torch.nn.functional as functional
 
-        height, width = image.shape[:2]
-        rgb = np.ascontiguousarray(image[..., ::-1])  # OpenCV is BGR
         batch = self._processor(images=rgb, return_tensors="pt")
         batch = {name: tensor.to(self._runtime_device) for name, tensor in batch.items()}
 
@@ -122,24 +168,25 @@ class MonocularDepthProvider(DepthProvider):
             mode="bicubic",
             align_corners=False,
         )
-        raw = np.asarray(depth[0, 0].detach().cpu().numpy(), dtype=np.float32)
-        return normalise_depth(raw, near_is_high=self._near_is_high)
+        return np.asarray(depth[0, 0].detach().cpu().numpy(), dtype=np.float32)
 
+    def _infer_onnx(
+        self, rgb: npt.NDArray[np.uint8], height: int, width: int
+    ) -> npt.NDArray[np.float32]:
+        """onnxruntime path — same processor preprocessing, same contract.
 
-def normalise_depth(
-    raw: npt.NDArray[np.float32],
-    near_is_high: bool = True,
-) -> npt.NDArray[np.float32]:
-    """Min-max stretch to ``[0, 1]`` with the polarity made explicit.
+        The exported graph emits ``(1, h, w)`` (verified by
+        ``scripts/export_depth_onnx.py``), so ``tensor[0]`` is the 2-D map;
+        NaN/Inf from a degenerate graph are zeroed before normalisation.
+        """
+        import cv2
 
-    A flat prediction (single value) maps to all-zeros — "everything at
-    the same distance" — rather than to NaN.
-    """
-    low = float(raw.min())
-    high = float(raw.max())
-    span = high - low
-    if span <= 1e-6:
-        return np.zeros_like(raw)
-    norm = (raw - low) / span
-    relative = 1.0 - norm if near_is_high else norm
-    return np.asarray(np.clip(relative, 0.0, 1.0), dtype=np.float32)
+        batch = self._processor(images=rgb, return_tensors="np")
+        pixel_values = np.asarray(batch["pixel_values"], dtype=np.float32)
+        tensor = self._session.run(None, {"pixel_values": pixel_values})[0]
+        depth = tensor[0]
+        assert depth.ndim == 2, f"Unexpected depth shape: {depth.shape}"
+        depth = np.nan_to_num(depth, nan=0.0, posinf=0.0, neginf=0.0)
+        if depth.shape != (height, width):
+            depth = cv2.resize(depth, (width, height), interpolation=cv2.INTER_CUBIC)
+        return np.asarray(depth, dtype=np.float32)

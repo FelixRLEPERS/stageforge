@@ -26,7 +26,11 @@ from stageforge.output.file_sink import FileOutputSink
 from stageforge.output.ndi_sink import NDIOutputSink
 from stageforge.output.null_sink import NullOutputSink
 from stageforge.reconstruction.base import DepthProvider
-from stageforge.reconstruction.monocular import DEFAULT_MODEL_ID, MonocularDepthProvider
+from stageforge.reconstruction.monocular import (
+    DEFAULT_MODEL_ID,
+    DEFAULT_ONNX_PATH,
+    MonocularDepthProvider,
+)
 from stageforge.reconstruction.synthetic import SyntheticDepthProvider
 from stageforge.segmentation.base import Segmenter
 from stageforge.segmentation.depth_alpha import DepthAlphaSegmenter
@@ -131,6 +135,8 @@ def _build_depth(mode: str, config: Mapping[str, Any]) -> DepthProvider:
         device=str(monocular.get("device", "auto")),
         model_id=str(monocular.get("model_id", DEFAULT_MODEL_ID)),
         near_is_high=bool(monocular.get("near_is_high", True)),
+        backend=str(monocular.get("backend", "transformers")),
+        onnx_path=str(monocular.get("onnx_path", DEFAULT_ONNX_PATH)),
     )
 
 

@@ -40,6 +40,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `logging`, so the package imports in a bare environment.
 - `RelativeDepthFrame` in `core/types.py` and `SyntheticDepthProvider`
   in `reconstruction/synthetic.py`.
+- **ONNX depth backend (scenario D of the incremental perf pass)**:
+  `MonocularDepthProvider(backend=...)` accepts `"transformers"`
+  (default, previous behaviour) or `"onnx"`, wired through `builder.py`
+  as `reconstruction.monocular.backend` (optional `onnx_path` too);
+  `scripts/export_depth_onnx.py` exports the checkpoint (opset 17,
+  dynamic batch/H/W axes, `model.eval()` **before** export, values
+  normalised through `processor()` exactly as inference does);
+  `scripts/measure_depth_backends.py` benchmarks every backend the
+  current machine can run (backend runners split into the sibling
+  `scripts/_depth_backends.py` so both files stay < 200 lines). New
+  extras `onnx` / `onnx-gpu` and a mypy override for `onnxruntime`
+  (no stubs).
+- `reconstruction/onnx_support.py` — `open_onnx_session()`, the single
+  place a session is created (provider and benchmark share it), plus
+  `enable_bundled_cuda_dlls` (why that exists: see Fixed).
+- `reconstruction/depth_norm.py` — `normalise_depth`, moved out of
+  `monocular.py`; still re-exported from `monocular` and the package
+  root, so no import site changed.
+- `configs/dev_single.yaml` — single-camera variant of `dev.yaml` for
+  benches where only the index-1 UVC device delivers frames (the
+  two-camera wrapper ends the run on the silent one).
+- Tests: `test_onnx_output_shape`, `test_onnx_backend_matches_transformers`
+  (≤ 5 % of range), `test_onnx_missing_model_points_at_export_script`,
+  `test_unknown_backend_is_rejected`.
 
 ### Changed
 
@@ -62,6 +86,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `mypy` overrides added for the optional extras (`torch`,
   `transformers`, `timm`, `NDIlib`) and `loguru`, all of which may be
   absent from CI.
+
+### Fixed
+
+- **`pip install -e ".[ml]"` resolved `torch>=2.0` to the CPU wheel
+  from PyPI and would have silently replaced the existing CUDA build**
+  (`2.6.0+cu124`, `cuda_available=True`). The running install was
+  aborted mid-download (nothing installed yet) and redone in the
+  README's order: torch/torchvision from
+  `download.pytorch.org/whl/cu124` first (`torchvision-0.21.0+cu124`
+  matches torch 2.6 — the latest PyPI torchvision pins `torch==2.15`
+  and would flip CUDA off), then `transformers timm`, then
+  `pip install -e ".[ml]" --no-deps`. Documented in README "ML extras
+  on a CUDA machine"; moving torch out of the `[ml]` extra entirely is
+  deferred (it would break the bare `pip install -e ".[ml]"` path on
+  CPU-only machines).
+- **onnxruntime's CUDA provider registered itself but failed every
+  Conv: `cuDNN is unavailable ... LoadLibrary failed for
+  cudnn64_9.dll, error 2`.** On Windows those DLLs ship inside
+  `torch/lib` and are not on the process DLL search path — the failure
+  only stayed hidden in the first benchmark because torch had already
+  been imported in the same process. `enable_bundled_cuda_dlls()` now
+  prepends `torch/lib` to `PATH` before the session is created, which
+  the isolated benchmark confirmed (crash → GPU inference).
 
 ### Performance
 
@@ -111,6 +158,56 @@ frame budget. Measured on the full 1920x1080 raster, synthetic mode:
   percentile downsampling covered in `tests/test_segmentation_depth_alpha.py`.
   The commit message says "int16 composite"; the shipped
   implementation is the faster uint8 path described above.
+- Third pass — **real monocular-depth inference**, measured with
+  `scripts/measure_depth_backends.py` (20 iters after 3 warm-up, full
+  1920x1080 synthetic frame, the same pre/infer/post steps as
+  `MonocularDepthProvider._infer`, each backend's GPU memory released
+  before the next row):
+
+  | backend | avg ms | min | max | p95 |
+  | --- | ---: | ---: | ---: | ---: |
+  | transformers fp32 (device=auto) | 52.07 | 50.36 | 54.11 | 53.33 |
+  | transformers fp16 (cuda) | 34.37 | 33.44 | 36.25 | 35.35 |
+  | torch.compile fp32 | n/a | n/a | n/a | n/a |
+  | onnx (cuda) | **47.29** | 45.52 | 49.07 | 48.60 |
+
+  Run-to-run spread across four executions: fp32 52–53, fp16 34–37,
+  onnx 46–48 ms.
+
+  - Scenario selection: fp32 measured **> 40 ms → scenario D (ONNX
+    backend)**; `torch.compile` dies on this Windows machine
+    (`InternalTorchDynamoError`), so scenario C was untestable.
+  - Measured facts that were previously assumed: the processor uses
+    **ImageNet** normalisation — `image_mean=(0.485, 0.456, 0.406)`,
+    `image_std=(0.229, 0.224, 0.225)`, *not* `[0.5, 0.5, 0.5]` — and
+    `predicted_depth.shape == (1, 518, 924)`, **no extra singleton
+    axis**, so `result[0]` (the batch index) is the 2-D map.
+  - ONNX export round-trips against torch at
+    `max |onnx − torch| = 0.000056` (fp32, opset 17, 99.1 MB model in
+    gitignored `models/`).
+  - The released transformer path (fp32) goes **52.07 → 47.29 ms** on
+    the ONNX backend. Best available remains transformers fp16 at
+    34.4 ms — budget 33 ms is still **FAIL by ~1.4 ms**; fp16 was
+    measured, not shipped (scenario D's prescription). Proposed next
+    steps (not implemented): fp16 ONNX export, moving the bicubic
+    upsample onto the GPU path.
+  - The first onnx run printed avg 119.6 / max 1367.6 ms: the
+    benchmark's local `model` variable held a second reference, so the
+    "free between rows" cleanup did not actually release the torch
+    models. The script now keeps exactly one reference per backend —
+    47.29 ms is the same-process number after that fix.
+  - Real-camera run (`configs/dev_single.yaml`, 30 frames, 1920x1080
+    from the index-1 device): `avg_latency_ms=1303.3`. Layer probe —
+    `capture.read` **1000 ms** (this bench device delivers ~1 fps;
+    the code blocks in `capture.read()` with no sleeps of its own),
+    `depth_for` **66 ms** steady on real frames after warm-up, the
+    ~237 ms residual is file-sink PNG encoding + debug logging (both
+    outside `profile_pipeline.py`'s stage table). No `autocrop updated:`
+    line is correct here — detection runs once, `None -> None` does not
+    log (`capture/source.py`). Next steps proposed, not implemented:
+    async capture queue to hide the device pacing, `logging.level: info`
+    for runs, PNG → lossless-but-cheaper encode or file sink behind a
+    `--frames` dry profile.
 
 ### Decisions taken while scaffolding (MVP)
 
