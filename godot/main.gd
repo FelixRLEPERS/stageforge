@@ -12,6 +12,13 @@ const FPS_SAMPLE_FRAMES := 120
 const FPS_MIN_FPS := 25.0
 const CAMERA_TARGET := Vector3(0.0, 2.0, -4.5)
 const DEFAULT_TOPIC := "finance"
+## Set STAGEFORGE_GODOT_SHOT=<path.png> to render one frame to disk and quit.
+## Deterministic screenshot for the report — no editor or remote debugger.
+const SHOT_ENV := "STAGEFORGE_GODOT_SHOT"
+const SHOT_FRAME := 90
+## Set STAGEFORGE_GODOT_KEYS=1 to inject the demo keystrokes at startup:
+## proof that _input() routes 1-4 and Space, captured in the run log.
+const KEYS_ENV := "STAGEFORGE_GODOT_KEYS"
 
 const ARLoader = preload("res://ar_loader.gd")
 const HUD = preload("res://debug_ui.gd")
@@ -20,6 +27,8 @@ var _fps_frames := 0
 var _fps_elapsed := 0.0
 var _fps_reported := false
 var _topic := "none"
+var _shot_frame := 0
+var _shot_started := false
 
 
 func _ready() -> void:
@@ -28,6 +37,22 @@ func _ready() -> void:
 	_validate_scene()
 	_setup_ndi()
 	load_topic(DEFAULT_TOPIC)
+	_maybe_self_test_keys()
+
+
+func _maybe_self_test_keys() -> void:
+	"""Inject the real keystrokes through the input system, so the handler
+	is exercised end-to-end rather than only read for correctness. Two
+	Space presses leave the AR group visible again for the screenshot."""
+	if OS.get_environment(KEYS_ENV).is_empty():
+		return
+	var order: Array[Key] = [KEY_2, KEY_3, KEY_4, KEY_1, KEY_SPACE, KEY_SPACE]
+	for code in order:
+		var event := InputEventKey.new()
+		event.physical_keycode = code
+		event.pressed = true
+		Input.parse_input_event(event)
+	print("godot keys: self-test injected 2,3,4,1,Space,Space")
 
 
 func _aim_camera() -> void:
@@ -123,6 +148,7 @@ func _hud() -> HUD:
 
 func _process(delta: float) -> void:
 	_track_fps(delta)
+	_maybe_capture_shot()
 
 
 func _track_fps(delta: float) -> void:
@@ -137,3 +163,23 @@ func _track_fps(delta: float) -> void:
 	print("godot fps: avg=%.1f over %d frames (target >= 25)" % [fps, _fps_frames])
 	assert(fps >= FPS_MIN_FPS, "fps below 25: %.1f" % fps)
 	_fps_reported = true
+
+
+func _maybe_capture_shot() -> void:
+	if _shot_started:
+		return
+	var path := OS.get_environment(SHOT_ENV)
+	if path.is_empty() or DisplayServer.get_name() == "headless":
+		return
+	_shot_frame += 1
+	if _shot_frame < SHOT_FRAME:
+		return
+	_shot_started = true
+	await RenderingServer.frame_post_draw
+	var image := get_viewport().get_texture().get_image()
+	if image == null or image.is_empty():
+		push_warning("godot shot: empty frame")
+		return
+	var err := image.save_png(path)
+	print("godot shot: %s err=%d %dx%d" % [path, err, image.get_width(), image.get_height()])
+	get_tree().quit()
