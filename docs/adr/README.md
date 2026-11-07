@@ -76,4 +76,5 @@ What was decided, stated as "We will …".
 | [0003](0003-pull-based-capture-contract.md) | Pull-based capture contract | Accepted |
 | [0004](0004-godot-blender-instead-of-ue5.md) | Godot + Blender instead of Unreal Engine 5 | Accepted |
 | [0005](0005-calibration-ccm-vs-grid.md) | ColorChecker to CCM 3x3, manual 125-point grid dropped | Accepted |
-| [0006](0006-backplate-occlusion.md) | Backplate + depth-quad occlusion for MVP | Accepted |
+| [0006](0006-backplate-occlusion.md) | Backplate + depth-quad occlusion for MVP | Superseded by 0009 |
+| [0009](0009-3d-studio-occlusion.md) | 3D studio occlusion (mesh + cameras) | Accepted |
