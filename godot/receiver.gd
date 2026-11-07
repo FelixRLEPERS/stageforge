@@ -1,11 +1,11 @@
 extends Node
 ## Reads the RGBA stream published by stageforge.output.GodotOutputSink
-## (file-backed shared buffer, seqlock protocol) and feeds the plate
-## texture in Scene3D. Transport is documented in
+## (file-backed shared buffer, seqlock protocol) and feeds the presenter
+## plate built by studio_builder.gd. Transport is documented in
 ## docs/06-compositing-ar.md (§ "Python → Godot: RGBA stream").
 ##
-## Not fatal when absent: with no pipeline running the plate simply
-## stays transparent and the scene keeps rendering.
+## Not fatal when absent: with no pipeline running the plate simply stays
+## blank and the scene keeps rendering.
 
 const DEFAULT_PATH := "res://../out/godot_frame.rgba"
 const HEADER_BYTES := 40
@@ -13,15 +13,19 @@ const MAGIC := "SGFRM01\n"
 const SEQ_OFFSET := 16
 const FORMAT_RGBA8 := 0
 const MAX_DIM := 8192
-const LOG_EVERY_FRAMES := 300
+const LOG_EVERY_SECONDS := 1.0
 
 var _path := ""
 var _texture: ImageTexture
 var _last_seq := -1
 var _frames := 0
 var _missing_logged := false
+var _log_clock := 0.0
+var _hud_notified := false
+var _size := Vector2i.ZERO
 
-@onready var plate: MeshInstance3D = $"../Scene3D/Plate"
+## Plate lives under VirtualStudio since the studio demo (was Scene3D/Plate).
+@onready var plate: MeshInstance3D = $"../Scene3D/VirtualStudio/PresenterPlate"
 
 
 func _ready() -> void:
@@ -36,7 +40,7 @@ func _resolve_path() -> String:
 	return ProjectSettings.globalize_path(DEFAULT_PATH).simplify_path()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	var file := FileAccess.open(_path, FileAccess.READ)
 	if file == null:
 		if not _missing_logged:
@@ -44,8 +48,20 @@ func _process(_delta: float) -> void:
 			print("godot receiver: no stream yet at %s (pipeline not running?)" % _path)
 		return
 	_missing_logged = false
+	var before := _frames
 	_read_frame(file)
 	file.close()
+	if _frames == before:
+		return  # no new frame this tick; the log below counts delivered frames only
+	_log_clock += delta
+	if _log_clock >= LOG_EVERY_SECONDS:
+		_log_clock = 0.0
+		print(
+			(
+				"godot receiver: frame #%d %dx%d seq=%d (%.0f fps)"
+				% [_frames, _size.x, _size.y, _last_seq, 1.0 / maxf(delta, 0.0001)]
+			)
+		)
 
 
 func _read_frame(file: FileAccess) -> void:
@@ -80,15 +96,22 @@ func _publish(width: int, height: int, pixels: PackedByteArray) -> void:
 	if img.is_empty():
 		push_warning("godot receiver: bad image %dx%d" % [width, height])
 		return
+	if not is_instance_valid(plate):
+		if not _missing_logged:
+			_missing_logged = true
+			push_warning("godot receiver: PresenterPlate node missing (scene changed?)")
+		return
 	if _texture == null or _texture.get_size() != Vector2(width, height):
 		_texture = ImageTexture.create_from_image(img)
 		var mat := plate.material_override as StandardMaterial3D
 		if mat != null:
 			mat.albedo_texture = _texture
 		else:
-			push_warning("godot receiver: Plate has no StandardMaterial3D override")
+			push_warning("godot receiver: plate has no StandardMaterial3D override")
 	else:
 		_texture.update(img)
 	_frames += 1
-	if _frames == 1 or _frames % LOG_EVERY_FRAMES == 0:
-		print("godot receiver: frame #%d %dx%d seq=%d" % [_frames, width, height, _last_seq])
+	_size = Vector2i(width, height)
+	if not _hud_notified:
+		_hud_notified = true
+		get_tree().call_group("stageforge_hud", "set_video", "%dx%d" % [width, height])
