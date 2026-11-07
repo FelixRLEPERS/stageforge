@@ -7,6 +7,9 @@ extends Node3D
 ##   BLEND_MODE_ADD  — black contributes nothing (src.rgb * src.a = 0), so
 ##     the picture glows like a hologram over a bright wall instead of
 ##     stacking on top of it (which would blow the highlights white).
+##     WORKAROUND for black-background PNGs (Qwen output has no alpha):
+##     with ALPHA we would get a solid black square. Replace with
+##     ALPHA/MIX when true-alpha assets are available.
 ##   TRANSPARENCY_ALPHA with albedo_color.a — one fade channel: the initial
 ##     0 ramps to 1 over FADE_SECONDS on load, and _process() drives it on
 ##     hide/show. No second property to keep in sync.

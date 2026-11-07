@@ -10,7 +10,7 @@ through the RGBA stream described in `docs/06-compositing-ar.md`.
 | | |
 |---|---|
 | Godot | **4.4+** (addon `compatibility_minimum=4.4`); tested on portable 4.5.1 at `D:\AstraForge\runtime\godot\Godot_v4.5.1-stable_win64.exe` |
-| NDI Runtime | **required for `NDIOutput`** — free from <https://ndi.video/tools/ndi-core-suite/>; the godot-ndi addon auto-detects the installer. Without it the NDI leg logs `godot ndi: SKIP`, while the shared-memory stream (`GodotOutputSink` → `receiver.gd`) works independently |
+| NDI Runtime | **required for the optional NDI output** — free from <https://ndi.video/tools/ndi-core-suite/>; the godot-ndi addon auto-detects the installer. **Not needed for the local demo** — NDI is disabled there (`ndi_setup.gd` call commented out) and the shared-memory stream (`GodotOutputSink` → `receiver.gd`) carries the plate; install the Runtime to re-enable NDI on the pilot |
 | godot-ndi addon | vendored at `addons/godot-ndi/` (MPL-2.0, Windows binaries; see `LICENSE` + `NOTICE.md`) |
 
 Godot is portable — no installer, no pip, nothing to add to PATH.
@@ -43,9 +43,8 @@ Expected output:
 godot studio: environment + floor/walls + 3 lights + plate built
 godot ar: 4 topic(s) loaded from res://ar_config.json
 godot hud: ready (topic, fps, key map)
-StageForge Godot ready, NDI output: StageForge_Godot
+StageForge Godot ready
 godot smoke: viewport contract PASS (1920x1080, studio opaque)
-godot ndi: SKIP (NDI Runtime / addon unavailable)
 godot receiver: frame #1 1620x911 seq=20 (30 fps)
 godot fps: avg=30.x over 120 frames (target >= 25)
 ```
@@ -82,7 +81,6 @@ Main (main.gd)
    │                 stays pinned at 1920x1080 (broadcast contract), the
    │                 window is only a debug view
    └─ SubViewport    1920x1080, transparent_bg=false, UPDATE_ALWAYS
-      ├─ NDIOutput   added by main.gd at runtime when the addon loads
       └─ Scene3D
          ├─ Camera3D        aims at CAMERA_TARGET in main.gd
          ├─ VirtualStudio   studio_builder.gd — environment, floor, walls,
@@ -92,6 +90,10 @@ Main (main.gd)
 └─ DebugUI (CanvasLayer)    debug_ui.gd — topic, fps, key map; window only,
                             deliberately outside the SubViewport so it never
                             reaches the broadcast output
+└─ NDISetup (Node)          ndi_setup.gd — optional NDI output, DISABLED for the
+                            local demo (call in main.gd `_ready()` is commented
+                            out; see Known limitations). Attach on the pilot
+                            after the NDI Runtime is installed.
 ```
 
 `main.gd` validates the contract on every start (`assert`) and measures
@@ -102,14 +104,22 @@ so an opaque viewport is the honest contract. The alpha/Key-Fill check
 returns when the AR-over-live-feed mode comes back — see the limitation
 note below.
 
-## Check the NDI source in OBS
+## NDI output — disabled for the local demo
 
-1. Install the NDI Runtime (link above) — without it the project logs
-   `godot ndi: SKIP` and no source appears.
-2. Start the project (editor F5 or CLI).
-3. OBS Studio → *Tools → NDI Source* (obs-ndi plugin) →
-   **Source name: `StageForge_Godot`**.
-   Alternative: NDI Studio Monitor (Part of NDI Tools) — same name.
+**The local demo uses Shared Memory (mmap) only**, through `receiver.gd`
+(`GodotOutputSink` → plate). NDI is deferred to the pilot because the
+vendored `godot-ndi` addon crashes Godot (signal 11) at shutdown when the
+NDI Runtime is absent, and the addon is off-limits to edit.
+
+To bring NDI back on the pilot:
+
+1. Install the free NDI Runtime (link in Requirements) — the addon
+   auto-detects it.
+2. Uncomment `$NDISetup.attach($ViewportHost/SubViewport)` in `main.gd`
+   `_ready()`.
+3. Start the project, then OBS Studio → *Tools → NDI Source* (obs-ndi
+   plugin) → **Source name: `StageForge_Godot`** (alternative: NDI Studio
+   Monitor, part of NDI Tools).
 4. **Alpha check:** not applicable while the studio demo renders an
    opaque frame (`transparent_bg=false`). Re-enable it — a solid-colour
    source underneath must show through the empty areas — once the
@@ -130,20 +140,18 @@ Verified live: `godot.get_godot_version` → `4.5.1.stable.official`,
 
 ## Known limitations (measured on this machine)
 
-- **NDI Runtime is not installed** on the StageForge dev machine
-  (`HKLM\SOFTWARE\NDI` absent) → `godot ndi: SKIP` is the expected
-  line today; install the Runtime and rerun to get the source. The addon
-  DLLs are vendored, nothing else to download.
-- **The godot-ndi addon crashes Godot on exit when the NDI Runtime is
-  absent** (signal 11 in `load_runtime`'s teardown, after `godot ndi:
-  SKIP` has already printed). Bisected: with `godot-ndi.gdextension`
+- **NDI is disabled for the local demo.** The vendored `godot-ndi` addon
+  crashes Godot on exit when the NDI Runtime is absent (signal 11 in
+  `load_runtime`'s teardown). Bisected: with `godot-ndi.gdextension`
   renamed away the same run exits 0, so the fault is entirely in the
-  vendored addon, not in this project's scripts. Everything — startup,
-  all frames, the fps assert, `Esc`, the screenshot — completes before
-  the crash, so the demo itself is unaffected; only the exit code is
-  non-zero. Installing the Runtime fixes it; the addon is vendored and
-  deliberately left unmodified.
-- No NDI/Spout verification was possible without the Runtime — the OBS
+  vendored addon, not in this project's scripts — and the addon is
+  deliberately left unmodified. **Decision:** keep NDI off for the local
+  demo (the `$NDISetup.attach(...)` call in `main.gd` is commented out),
+  so the run exits cleanly and Shared Memory (`receiver.gd`) is the only
+  transport. The NDI Runtime is still not installed on this dev machine
+  (`HKLM\SOFTWARE\NDI` absent); re-enable NDI on the pilot, after
+  installing the free Runtime.
+- No NDI/Spout verification was possible without the Runtime — the NDI
   steps above are the manual acceptance test for the machine that has it.
   Alternative if NDI is unwanted: [spout-gd](https://github.com/you-win/spout-gd)
   (Windows shared-texture output, same pattern: add the node inside the
@@ -159,7 +167,8 @@ Verified live: `godot.get_godot_version` → `4.5.1.stable.official`,
 | Path | Purpose |
 |---|---|
 | `project.godot` | gl_compatibility renderer, 1920x1080, `max_fps=30` |
-| `main.tscn` / `main.gd` | scene contract + camera + NDI wiring + keys + smoke asserts |
+| `main.tscn` / `main.gd` | scene contract + camera + keys + smoke asserts |
+| `ndi_setup.gd` | optional NDI output — **disabled** for the local demo (see NDI section) |
 | `studio_builder.gd` | environment, floor/walls, lights, `PresenterPlate` |
 | `ar_loader.gd` / `ar_config.json` | topic holograms, blend + float + billboard |
 | `debug_ui.gd` | window-only HUD (topic, fps, key map) |

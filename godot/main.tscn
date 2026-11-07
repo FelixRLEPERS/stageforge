@@ -5,6 +5,7 @@
 [ext_resource type="Script" path="res://ar_loader.gd" id="3_ar"]
 [ext_resource type="Script" path="res://receiver.gd" id="4_recv"]
 [ext_resource type="Script" path="res://debug_ui.gd" id="5_hud"]
+[ext_resource type="Script" path="res://ndi_setup.gd" id="6_ndi"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
@@ -41,3 +42,6 @@ script = ExtResource("4_recv")
 
 [node name="DebugUI" type="CanvasLayer" parent="."]
 script = ExtResource("5_hud")
+
+[node name="NDISetup" type="Node" parent="."]
+script = ExtResource("6_ndi")

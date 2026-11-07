@@ -2,11 +2,11 @@ extends Node
 ## StageForge render layer — entry point (see docs/06-compositing-ar.md).
 ##
 ## Owns the 1920x1080 SubViewport holding the virtual studio, routes the
-## topic keys to the AR group, wires the optional NDI output (vendored
-## godot-ndi addon; skipped cleanly when the NDI Runtime is not installed)
-## and validates the scene contract on start.
+## topic keys to the AR group, and validates the scene contract on start.
+## Transport for the local demo is Shared Memory (mmap) via receiver.gd;
+## the optional NDI output lives in ndi_setup.gd and is disabled until the
+## NDI Runtime is installed (it crashes Godot at shutdown without it).
 
-const NDI_SOURCE_NAME := "StageForge_Godot"
 const VIEWPORT_SIZE := Vector2i(1920, 1080)
 const FPS_SAMPLE_FRAMES := 120
 const FPS_MIN_FPS := 25.0
@@ -32,10 +32,15 @@ var _shot_started := false
 
 
 func _ready() -> void:
-	print("StageForge Godot ready, NDI output: StageForge_Godot")
+	print("StageForge Godot ready")
 	_aim_camera()
 	_validate_scene()
-	_setup_ndi()
+	## NDI disabled for the local demo: godot-ndi crashes Godot (signal 11)
+	## on shutdown when the NDI Runtime is absent, and the vendored addon
+	## must not be touched. Shared Memory (mmap) via receiver.gd is the
+	## only transport used here. Re-enable on the pilot, once the operator
+	## installs the free NDI Runtime: uncomment the line below.
+	# $NDISetup.attach($ViewportHost/SubViewport)
 	load_topic(DEFAULT_TOPIC)
 	_maybe_self_test_keys()
 
@@ -76,31 +81,13 @@ func _validate_scene() -> void:
 	)
 	assert(
 		viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS,
-		"SubViewport.render_target_update_mode must be Always (NDI while unfocused)"
+		"SubViewport.render_target_update_mode must be Always (keep rendering while unfocused)"
 	)
 	assert($ViewportHost/SubViewport/Scene3D/VirtualStudio != null, "VirtualStudio missing")
 	assert($ViewportHost/SubViewport/Scene3D/ARGroup != null, "ARGroup missing")
 	assert($ViewportHost/SubViewport/Receiver != null, "Receiver (stream reader) missing")
 	assert($DebugUI != null, "DebugUI missing")
 	print("godot smoke: viewport contract PASS (1920x1080, studio opaque)")
-
-
-func _setup_ndi() -> void:
-	"""Attach NDIOutput inside the SubViewport when the addon can load."""
-	var viewport: SubViewport = $ViewportHost/SubViewport
-	if not ClassDB.class_exists("NDIOutput"):
-		push_warning(
-			(
-				"godot-ndi: NDIOutput unavailable (addon disabled or NDI Runtime "
-				+ "not installed) - NDI output off, see godot/README.md"
-			)
-		)
-		print("godot ndi: SKIP (NDI Runtime / addon unavailable)")
-		return
-	var ndi: Node = ClassDB.instantiate("NDIOutput") as Node
-	ndi.name = NDI_SOURCE_NAME
-	viewport.add_child(ndi)
-	print("godot ndi: OK source '%s'" % NDI_SOURCE_NAME)
 
 
 # --- topic switcher -------------------------------------------------------
