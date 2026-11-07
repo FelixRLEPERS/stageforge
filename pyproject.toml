@@ -60,6 +60,10 @@ onnx-gpu = [
   "onnxruntime-gpu>=1.16",
   "onnx",
 ]
+# Offline 3D reconstruction import (ADR-0009): trimesh + numpy only.
+reconstruction = [
+  "trimesh",
+]
 
 [project.urls]
 Homepage = "https://github.com/stageforge/stageforge"

@@ -35,6 +35,7 @@ nav:
       - ADR 0004: adr/0004-godot-blender-instead-of-ue5.md
       - ADR 0005: adr/0005-calibration-ccm-vs-grid.md
       - ADR 0006: adr/0006-backplate-occlusion.md
+      - ADR 0009: adr/0009-3d-studio-occlusion.md
 
 markdown_extensions:
   - admonition

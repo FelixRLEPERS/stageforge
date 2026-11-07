@@ -1,5 +1,7 @@
 # ADR-0006. Backplate + depth-quad occlusion for the MVP
 
+**Status: Superseded by ADR-0009.**
+
 - **Status:** accepted
 - **Date:** 2026-11-07
 - **Area:** `reconstruction` (Python), `godot` (render layer)
