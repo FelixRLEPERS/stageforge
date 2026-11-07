@@ -30,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `tests/test_pipeline.py` still passes.
 - Optional extras in `pyproject.toml`: `ml` (torch, torchvision,
   transformers, timm) and `ndi` (ndi-python).
+- **Godot render layer** (ADR-0004, replaces the UE5 concept):
+  `godot/` scaffold — 1920x1080 transparent SubViewport, vendored
+  `godot-ndi` addon (NDI source `StageForge_Godot`), `receiver.gd`
+  consuming the stream, headless smoke asserts (fps ≥ 25);
+  `blender/` — `export_for_godot.py` glTF 2.0 export + MCP bridge;
+  `output.GodotOutputSink` (`output.mode: "godot"`, file-backed RGBA
+  buffer with seqlock); OpenCode MCP servers `godot` and `blender`.
 - ADR 0002 (`monocular-depth-contract`) and ADR 0003
   (`pull-based-capture-contract`), both indexed in `docs/adr/README.md`
   and `mkdocs.yml`.

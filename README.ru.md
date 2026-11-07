@@ -25,7 +25,7 @@ StageForge превращает обычную многокамерную сту
 1. Захват (SDI/NDI + генлок)
 2. Реконструкция и трекинг (SfM, ToF, Free-D)
 3. Сегментация и альфа (AI-ключер / на основе глубины)
-4. Композитинг и AR (мост к Unreal Engine 5)
+4. Композитинг и AR (рендер-слой Godot)
 5. Вывод (SDI Key/Fill, NDI)
 
 Смотрите [docs/02-architecture.md](docs/02-architecture.md).

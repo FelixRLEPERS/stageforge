@@ -28,6 +28,6 @@ unless you prefer to remain anonymous.
 ## Scope notes
 
 StageForge handles live broadcast feeds and third-party integrations
-(Unreal Engine, DeckLink, NDI). Vulnerabilities in those upstream
+(Godot Engine, DeckLink, NDI). Vulnerabilities in those upstream
 projects should be reported to their vendors; we will help relay them
 if needed.

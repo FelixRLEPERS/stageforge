@@ -76,6 +76,19 @@ average fps over 120 frames (`fps >= 25` required by the plan).
    source — the empty areas of the 1920x1080 frame must show the colour
    through (transparent background), the cube must stay opaque.
 
+## MCP tooling (OpenCode)
+
+`opencode.json` (local config, not committed) wires two local servers —
+absolute paths, restart the OpenCode session once after editing:
+
+| server | command | purpose |
+|---|---|---|
+| `godot` | `node C:\Users\FelixR\tools\godot-mcp\build\index.js` + `GODOT_PATH` | project/scene inspection, debug output (18 tools) |
+| `blender` | `uvx mcp-for-blender` | live Blender control — see `blender/README.md` |
+
+Verified live: `godot.get_godot_version` → `4.5.1.stable.official`,
+`blender.get_addon_status` → Blender 5.0.1, protocol 15/15.
+
 ## Known limitations (measured on this machine)
 
 - **NDI Runtime is not installed** on the StageForge dev machine
@@ -98,8 +111,8 @@ average fps over 120 frames (`fps >= 25` required by the plan).
 |---|---|
 | `project.godot` | gl_compatibility renderer, 1920x1080, `max_fps=30` |
 | `main.tscn` / `main.gd` | scene contract + NDI wiring + smoke asserts |
-| `receiver.gd` | reads the Python RGBA stream (added with the integration phase) |
-| `assets/` | `.glb` exports from `blender/` (generated, not committed) |
+| `receiver.gd` | reads the Python RGBA stream (`GodotOutputSink`, seqlock) |
+| `assets/` | `.glb` exports from `blender/` (`test_*.glb` ignored) |
 | `addons/godot-ndi/` | vendored NDI output addon (MPL-2.0) |
 | `tests/` | smoke scene for Phase 5 |
 

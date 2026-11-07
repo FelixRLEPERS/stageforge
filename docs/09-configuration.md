@@ -60,7 +60,7 @@ compositing:
   background_shade: 0.55       # brightness the keyed-out background keeps (0..1)
 
 output:
-  mode: "file"                 # file | ndi | null
+  mode: "file"                 # file | ndi | godot | null
   out_dir: "out"               # file sink: fill_NNNN.png / key_NNNN.png
   ndi_name: "StageForge Preview"
 
@@ -99,8 +99,8 @@ segmenter:
   feather_px: 2
 
 compositor:
-  engine: unreal            # unreal | none
-  bridge: "aximmetry"       # aximmetry | zerodensity | mosys | direct
+  engine: godot             # godot | none (ADR-0004: Godot + Blender, no UE5)
+  bridge: "direct"          # direct (local render) | ndi | spout
   fallback: pass_through    # fail_air | pass_through
 
 output:
@@ -119,7 +119,7 @@ no namespacing) — the field names are disjoint, so
 MVP keys (raised by `builder.py`, before any device is opened):
 
 - `mode` must be `monocular` or `synthetic`.
-- `output.mode` must be `file`, `ndi` or `null`.
+- `output.mode` must be `file`, `ndi`, `godot` or `null`.
 - `camera.num_cameras` is clamped to the number of `camera.cameras`
   entries; with no entries a single default source is created.
 - `segmentation.depth_alpha` requires `0 <= low_pct < high_pct <= 100`.

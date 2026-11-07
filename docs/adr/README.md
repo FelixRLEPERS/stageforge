@@ -74,3 +74,4 @@ What was decided, stated as "We will …".
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |
 | [0002](0002-monocular-depth-contract.md) | Monocular depth is relative, not metric | Accepted |
 | [0003](0003-pull-based-capture-contract.md) | Pull-based capture contract | Accepted |
+| [0004](0004-godot-blender-instead-of-ue5.md) | Godot + Blender instead of Unreal Engine 5 | Accepted |

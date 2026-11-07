@@ -25,7 +25,7 @@ via SDI Key/Fill or NDI.
 1. Capture (SDI/NDI + genlock)
 2. Reconstruction & tracking (SfM, ToF, Free-D)
 3. Segmentation & alpha (AI keyer / depth-based)
-4. Compositing & AR (Unreal Engine 5 bridge)
+4. Compositing & AR (Godot render layer)
 5. Output (SDI Key/Fill, NDI)
 
 See [docs/02-architecture.md](docs/02-architecture.md).

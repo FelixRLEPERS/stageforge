@@ -56,7 +56,7 @@ on purpose — negotiate with a broadcast reseller. Substitutions in the
 
 - Blackmagic DeckLink SDK + drivers
 - NDI SDK (redistribution terms differ from Apache-2.0)
-- Unreal Engine 5.x + chosen bridge (Aximmetry / Zero Density / Mo-Sys)
+- Godot 4.5 portable (MIT) render layer + Blender 5.x asset prep (ADR-0004)
 
 ## Budget sanity check
 

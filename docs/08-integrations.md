@@ -8,8 +8,8 @@ products, it wires them together.
 | System | Role in StageForge | Interface |
 |--------|--------------------|-----------|
 | **Free-D** | Camera tracking protocol (pan/tilt/zoom/focus/position) | `tracking.Tracker` |
-| **Unreal Engine 5** | AR rendering | `compositing.Compositor` |
-| **Zero Density / Aximmetry / Mo-Sys** | Production-ready UE bridges | same Compositor slot |
+| **Godot Engine 4** | Real-time AR rendering layer (ADR-0004) | `compositing.Compositor` |
+| **Blender** | Offline asset prep → `.glb` for Godot | `blender/export_for_godot.py` |
 | **Vizrt AI Keyer** | AI person keying | `segmentation.Segmenter` |
 | **Pixotope Reveal** | AI segmentation alternative | `segmentation.Segmenter` |
 | **Blackmagic DeckLink** | SDI capture and Key/Fill output | `capture.CaptureSource`, `output.OutputSink` |

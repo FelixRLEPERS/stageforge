@@ -45,7 +45,7 @@ Lantern)** into two USB FHD capture cards, monocular depth, no SDI.
 - [ ] DeckLink SDI capture + Key/Fill output, measured ≤ 4 frames
 - [ ] Redundant output card and fail-over policy
 - [ ] AI `Segmenter` (Vizrt AI Keyer or Pixotope Reveal)
-- [ ] UE5 bridge through Aximmetry / Zero Density
+- [ ] Godot AR layer: NDI/Spout air verification + fps with real assets (ADR-0004)
 
 ## Phase 4 — Editorial automation
 

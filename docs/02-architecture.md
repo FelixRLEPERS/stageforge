@@ -41,7 +41,8 @@ Produces `AlphaMask` for the foreground — either an AI keyer
 
 ### L4 — Compositing & AR
 
-Renders AR assets in Unreal Engine 5 and mixes them with the masked
+Renders AR assets in **Godot 4** (real-time layer in `godot/`, assets
+prepared offline in Blender — ADR-0004) and mixes them with the masked
 plate. Interfaces: `compositing.Compositor`, `storylink.StoryLink`.
 
 ### L5 — Output

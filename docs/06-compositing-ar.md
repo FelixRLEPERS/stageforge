@@ -6,8 +6,8 @@ L4 renders the virtual content and mixes it with the keyed plate.
 
 | Job | Done by |
 |-----|---------|
-| Rendering 3D assets, lighting, shadows | Unreal Engine 5 (via Zero Density / Aximmetry / Mo-Sys bridge) |
-| Matching the plate camera | `CameraPose` from L2, pushed into UE as a frustum + transform |
+| Rendering 3D assets, lighting, shadows | Godot 4 (real-time layer in `godot/` — ADR-0004; assets prepped in Blender) |
+| Matching the plate camera | `CameraPose` from L2, pushed into Godot as a frustum + transform |
 | Deciding *what* to show | `storylink.StoryLink` |
 | Final mix (Fill + Key) | `compositing.Compositor` |
 
@@ -41,12 +41,12 @@ reason about it without a rule engine.
 - **Input** — `Frame` (plate), `AlphaMask`, the current AR scene
   description from Story-Link, `CameraPose`.
 - **Output** — a composited `Frame` for L5.
-- **Exceptions** — `RendererUnavailableError` if the UE bridge is
-  down; policy is configurable (`fail_air` | `pass_through`).
+- **Exceptions** — `RendererUnavailableError` if the Godot render
+  layer is down; policy is configurable (`fail_air` | `pass_through`).
 
 ## Latency
 
-UE render + mix must fit inside the overall 4-frame budget together
+Godot render + mix must fit inside the overall 4-frame budget together
 with L3 and L5. Practical rule: render *ahead* — the camera pose for
 frame N can be predicted from N-1, so the renderer starts before the
 plate arrives.
@@ -55,7 +55,7 @@ plate arrives.
 
 `Compositor` and `StoryLink` are stubs. Prototype
 [`prototypes/p03-story-link-mvp`](https://github.com/stageforge/stageforge/blob/main/prototypes/p03-story-link-mvp/README.md)
-proves the cue→asset mapping independently of Unreal.
+proves the cue→asset mapping independently of the render layer.
 
 ## Python → Godot: RGBA stream
 
