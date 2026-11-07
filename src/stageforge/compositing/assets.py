@@ -8,6 +8,7 @@ Story-Link wiring before the 3D bridge exists.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import cv2
@@ -25,6 +26,12 @@ _ANCHORS: dict[str, tuple[float, float]] = {
     "desk_left": (0.22, 0.64),
     "backdrop": (0.50, 0.34),
 }
+
+# The green cue box is a debug affordance, not on-air content: it only
+# draws when this variable is set, so a missing asset yields a clean
+# plate by default.
+_PLACEHOLDER_ENV = "STAGEFORGE_AR_PLACEHOLDER"
+_skipped: set[str] = set()
 
 __all__ = ["anchor_point", "load_asset", "place_asset"]
 
@@ -51,7 +58,7 @@ def load_asset(uri: str) -> npt.NDArray[np.uint8] | None:
     """Read an image asset as BGRA/BGR, or ``None`` when it is absent.
 
     Video and 3D assets are not handled by the 2D compositor; returning
-    ``None`` sends them to the on-air placeholder instead of crashing.
+    ``None`` lets the caller drop them instead of crashing.
     """
     if not uri or not Path(uri).is_file():
         return None
@@ -65,11 +72,25 @@ def place_asset(
     target: npt.NDArray[np.uint8],
     asset: ARAsset,
 ) -> npt.NDArray[np.uint8]:
-    """Blit ``asset`` onto ``target``; placeholder if the file is missing."""
+    """Blit ``asset`` onto ``target``; skip it when the file is missing.
+
+    An asset that is absent or not a loadable image (a video loop, a 3D
+    model) draws nothing, so the plate stays clean on air. Set
+    ``STAGEFORGE_AR_PLACEHOLDER=1`` to get the green cue box instead —
+    visible proof that a Story-Link rule fired.
+    """
     height, width = target.shape[:2]
     image = load_asset(asset.uri)
     if image is None:
-        return _placeholder(target, asset, width, height)
+        if os.environ.get(_PLACEHOLDER_ENV):
+            return _placeholder(target, asset, width, height)
+        if asset.asset_id not in _skipped:
+            _skipped.add(asset.asset_id)
+            logger.warning(
+                f"asset {asset.asset_id!r} ({asset.uri!r}) is not a loadable image; "
+                f"no overlay drawn — set {_PLACEHOLDER_ENV}=1 for the debug box"
+            )
+        return target
 
     scale = asset.scale if asset.scale > 0 else 1.0
     new_width = max(1, round(image.shape[1] * scale))
@@ -103,7 +124,11 @@ def _placeholder(
     width: int,
     height: int,
 ) -> npt.NDArray[np.uint8]:
-    """Green outline plus the asset id — visible proof that a cue fired."""
+    """Green outline plus the asset id — visible proof that a cue fired.
+
+    Only reachable when ``STAGEFORGE_AR_PLACEHOLDER`` is set (see
+    :func:`place_asset`); off by default because it is debug furniture.
+    """
     box_width = max(32, width // 5)
     box_height = max(32, height // 5)
     centre_x, centre_y = anchor_point(asset.anchor, width, height, asset.metadata)
