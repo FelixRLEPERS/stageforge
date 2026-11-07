@@ -30,6 +30,30 @@ StageForge превращает обычную многокамерную сту
 
 Смотрите [docs/02-architecture.md](docs/02-architecture.md).
 
+## 🎬 Живое демо студии (Godot)
+
+![Демо виртуальной студии StageForge](assets/readme/godot_demo.png)
+
+Рендер-слой прогоняет всю цепочку вживую: Python-пайплайн пишет один
+слот RGBA-кадра на диск (`GodotOutputSink` → `out/godot_frame.rgba`),
+`godot/receiver.gd` подхватывает его как плиту ведущего, а Godot
+композитит кадр в виртуальную студию 1920×1080 — пол, стены, свет,
+плита с картинкой и эфирный HUD. Стабильные 30 к/с на
+`gl_compatibility`.
+
+```bash
+# 1) кормим плиту (синтетический режим: ни камеры, ни GPU)
+#    в конфиге укажите output.mode: "godot" — см. docs/06-compositing-ar.md
+python -m stageforge.orchestrator --config configs/dev.yaml --dry-run --frames 30
+
+# 2) рендерим (портативный Godot 4.4+, режимы запуска — в godot/README.md)
+godot --path godot
+```
+
+Клавиши: `1`–`4` — смена темы (finance / sports / weather / breaking),
+`Space` — скрыть или показать AR-группу, `Esc` — выход. Подробный
+разбор: [`godot/README.md`](godot/README.md).
+
 ## Статус
 
 🚧 Преп-MVP каркас. См. [docs/11-roadmap.md](docs/11-roadmap.md).
