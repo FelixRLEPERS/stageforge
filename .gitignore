@@ -72,3 +72,9 @@ pitch_deck.pptx
 calibration/captures/
 *.cube
 *.ccm
+
+# Backplate + panorama depth (ADR-0006): the studio panorama shows the
+# real set (privacy) and the exported backplate is a derived artefact.
+# Neither enters the public repo - only scripts/stage_reconstruct.py does.
+calibration/captures/panoramas/
+assets/generated/backplates/
