@@ -22,8 +22,9 @@ from typing import Any, cast
 import numpy as np
 import trimesh
 
-# Blender (Z-up, -Y forward) -> Godot (Y-up, -Z forward). det(T) = +1: pure
-# axis permutation, handedness is preserved, so T.T == T^-1 (see ADR-0009).
+# Blender world (Z-up) -> Godot world (Y-up): (x, y, z)_blender -> (x, z, -y)_godot.
+# det(T) = +1: pure axis permutation, handedness preserved, so T.T == T^-1
+# (see ADR-0009).
 _AXIS_SWAP = np.array(
     [
         [1.0, 0.0, 0.0, 0.0],
@@ -150,9 +151,16 @@ def _orthonormal_rotation(rot: np.ndarray) -> np.ndarray:
 def _convert_camera(cam: dict[str, Any]) -> dict[str, Any]:
     name = str(cam.get("name", "camera"))
     m_blender = _camera_matrix(cam)
-    # T @ M @ T.T: T is orthogonal (T.T == T^-1), det(T) = +1 -> no handedness
-    # flip, only the axis labels move (Blender Z-up -> Godot Y-up).
-    m_godot = _AXIS_SWAP @ m_blender @ _AXIS_SWAP.T
+    # World change of coordinates, applied on the LEFT only: p_godot = T @ p_blender.
+    # A camera node's local convention (-Z forward, +Y up) is identical in both
+    # engines, so its basis maps as R_godot = T @ R_blender. Conjugating with
+    # T.T (T @ M @ T.T) would be correct only if the node's *local* coordinates
+    # were re-expressed by T as well (true for mesh geometry, which the glTF
+    # exporter bakes); for cameras it rotates the look direction by T^-1 and
+    # makes a Blender camera that looks down look horizontally in Godot.
+    # Verified against Blender's own glTF exporter (export_cameras=True).
+    # det(T) = +1 -> no handedness flip; T.T == T^-1.
+    m_godot = _AXIS_SWAP @ m_blender
     position = [float(v) for v in m_godot[:3, 3]]
 
     rot = _orthonormal_rotation(m_godot[:3, :3])

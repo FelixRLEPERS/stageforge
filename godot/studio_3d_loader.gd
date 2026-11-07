@@ -25,7 +25,9 @@ func _load_mesh() -> void:
 	if scene == null:
 		push_warning("studio_3d_loader: failed to load mesh resource: %s" % mesh_path)
 		return
-	var instance := scene.instantiate() if scene is PackedScene else null
+	var instance: Node = null
+	if scene is PackedScene:
+		instance = (scene as PackedScene).instantiate()
 	if instance == null:
 		push_warning("studio_3d_loader: %s is not a PackedScene" % mesh_path)
 		return
@@ -34,11 +36,13 @@ func _load_mesh() -> void:
 	_mark_occluders(self)
 
 func _mark_occluders(node: Node) -> void:
-	# Mark every mesh under the imported studio as an occluder candidate so
-	# AR sprites/decals can be hidden behind real studio geometry later.
+	# AR depth-occlusion happens automatically: the studio mesh renders in the
+	# same 3D scene, so Sprite3D/AR nodes behind it fail the depth test.
+	# NOTE: Godot 4.5 has no per-mesh "cast geometry into occlusion buffer"
+	# flag (the old property does not exist here). Occlusion *culling* would
+	# need an OccluderInstance3D + Occluder3D resource (Box/Quad/Array), which
+	# is part of the follow-up AR-occlusion wiring ADR (see ADR-0009 #6).
 	for child in node.get_children():
-		if child is MeshInstance3D:
-			child.cast_geometry_into_occlusion_buffer = true
 		_mark_occluders(child)
 
 func _load_cameras() -> void:
@@ -70,6 +74,7 @@ func _spawn_camera_marker(entry: Dictionary) -> void:
 	add_child(marker)
 	if spawn_cameras:
 		var cam := Camera3D.new()
+		cam.name = "Camera3D"  # explicit: auto-naming yields "@Camera3D@N"
 		cam.fov = float(entry.get("fov_deg", 70.0))
 		marker.add_child(cam)
 

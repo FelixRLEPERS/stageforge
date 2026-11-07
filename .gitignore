@@ -78,3 +78,7 @@ calibration/captures/
 # Neither enters the public repo - only scripts/stage_reconstruct.py does.
 calibration/captures/panoramas/
 assets/generated/backplates/
+
+# Scratch Blender exports from the ADR-0009 import pre-flight (regenerate
+# with temp_blender_export/*.py; nothing in here is a source file).
+temp_blender_export*/

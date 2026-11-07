@@ -60,6 +60,29 @@ def test_camera_axis_swap_and_scale(tmp_path: Path) -> None:
     assert cam["fov_deg"] == pytest.approx(math.degrees(0.8726646259971648))
 
 
+def test_camera_look_direction_converts(tmp_path: Path) -> None:
+    """A Blender camera with identity rotation looks down (-Z); after the
+    Z-up -> Y-up conversion it must still look down, i.e. along (0, -1, 0).
+
+    Guards against the T @ M @ T.T conjugation bug: conjugating a camera
+    transform (whose local -Z forward convention is shared by both engines)
+    rotates the look direction by T^-1 and yields (0, 0, -1) instead.
+    """
+    import numpy as np
+
+    cameras, _ = _run(tmp_path, "0,0,0,0,0,1,1.0")
+    quat = [float(v) for v in cameras[0]["quaternion"]]  # [x, y, z, w]
+    x, y, z, w = quat
+
+    def rotate(v: list[float]) -> np.ndarray:
+        qv = np.array([x, y, z])
+        t = 2.0 * np.cross(qv, np.array(v))
+        return np.array(v) + w * t + np.cross(qv, t)
+
+    fwd = rotate([0.0, 0.0, -1.0])
+    assert fwd == pytest.approx([0.0, -1.0, 0.0], abs=1e-6)
+
+
 def test_mesh_bbox_doubles_with_scale_ref(tmp_path: Path) -> None:
     """--scale-ref with distance 2.0 over a 1.0 source gap doubles the bbox."""
     import trimesh

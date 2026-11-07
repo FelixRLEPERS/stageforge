@@ -89,6 +89,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tests: `test_onnx_output_shape`, `test_onnx_backend_matches_transformers`
   (≤ 5 % of range), `test_onnx_missing_model_points_at_export_script`,
   `test_unknown_backend_is_rejected`.
+- **Level A — 3D studio import pipeline** (ADR-0009, supersedes ADR-0006
+  for occlusion): `scripts/import_studio_reconstruction.py` converts an
+  offline Blender reconstruction (mesh + `cameras.json`) into
+  `godot/assets/studio/` (`studio_mesh.glb` + per-camera
+  position/quaternion/FOV), with `--scale-ref` for scene scale and
+  Blender→Godot Z-up→Y-up conversion; `godot/studio_3d_loader.gd` a
+  `Node3D` loader that instantiates the mesh and spawns `Marker3D`/`Camera3D`
+  per camera. New `reconstruction` extra (`trimesh` only — no `scipy`,
+  no `pygltflib`); tests `test_import_reconstruction` (4).
 
 ### Changed
 
@@ -134,6 +143,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   been imported in the same process. `enable_bundled_cuda_dlls()` now
   prepends `torch/lib` to `PATH` before the session is created, which
   the isolated benchmark confirmed (crash → GPU inference).
+- **Camera conversion used `T · M · Tᵀ`, which points every imported
+  camera the wrong way** (pre-flight on a real Blender export caught it:
+  an identity Blender camera looking straight down ended up looking
+  horizontally in Godot). Conjugation re-expresses the node's *local*
+  coordinates, but a camera's local convention (−Z forward, +Y up) is
+  identical in both engines — only the world side changes, so the
+  conversion is `M_godot = T · M_blender` (left-multiply only).
+  Verified against Blender's own glTF exporter (`export_cameras=True`):
+  output quaternions now match Blender's camera nodes to 8 decimals
+  (4/4 cameras, incl. non-unit scale via SVD orthonormalization).
+  Regression test: `test_camera_look_direction_converts`.
+- **`godot/studio_3d_loader.gd` did not parse in Godot 4.5** (`var x :=
+  … if … else null` cannot infer a type with this project's
+  warnings-as-errors) and then referenced `cast_geometry_into_occlusion_buffer`,
+  a property that does not exist in 4.5 (occlusion culling is done via
+  `OccluderInstance3D` + an `Occluder3D` resource). AR depth-occlusion
+  itself needs neither — the studio mesh renders in the same 3D scene,
+  so nodes behind it fail the depth test; the `OccluderInstance3D`
+  wiring stays with the follow-up ADR. Headless pre-flight
+  (`godot/preflight_check.tscn`) now loads the real import and asserts
+  mesh AABB, marker positions, look directions and FOV.
 
 ### Performance
 

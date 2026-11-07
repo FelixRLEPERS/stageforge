@@ -42,6 +42,13 @@ Adding a layer means adding those three files plus an entry in
 5. UTF-8 + LF everywhere (`.editorconfig`, `.gitattributes`,
    `pre-commit` `mixed-line-ending` hook all agree).
 
+> **Known mypy baseline:** `mypy src scripts --strict` reports 13 errors in 6
+> older scripts that pre-date ADR-0009 (`stage_reconstruct.py`,
+> `profile_pipeline.py`, `measure_depth_backends.py`, `export_depth_onnx.py`,
+> `gen_tree.py`, `diagnose_camera.py`). CI type-checks `src/` only and stays
+> green. Do not try to "fix" that baseline in the middle of an unrelated task —
+> it is tracked as technical debt for the pilot.
+
 ## Commands
 
 ```bash

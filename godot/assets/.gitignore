@@ -3,3 +3,9 @@
 # pattern has to cover both the model and its sidecar.
 test_*.glb
 test_*.glb.import
+
+# ADR-0009 studio reconstruction (mesh + cameras) — derived from a Blender
+# export via scripts/import_studio_reconstruction.py; regenerable, and a
+# real reconstruction would show the actual set (privacy), so it stays
+# out of the repo like the backplate artefacts above.
+studio/
