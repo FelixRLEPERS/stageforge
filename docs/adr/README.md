@@ -75,3 +75,4 @@ What was decided, stated as "We will …".
 | [0002](0002-monocular-depth-contract.md) | Monocular depth is relative, not metric | Accepted |
 | [0003](0003-pull-based-capture-contract.md) | Pull-based capture contract | Accepted |
 | [0004](0004-godot-blender-instead-of-ue5.md) | Godot + Blender instead of Unreal Engine 5 | Accepted |
+| [0005](0005-calibration-ccm-vs-grid.md) | ColorChecker to CCM 3x3, manual 125-point grid dropped | Accepted |
