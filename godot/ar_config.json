@@ -1,0 +1,28 @@
+{
+  "topics": {
+    "finance": {
+      "asset": "ar-finance-chart.png",
+      "position": [-4.6, 2.6, -2.5],
+      "scale": 2.2,
+      "float_amplitude": 0.1
+    },
+    "sports": {
+      "asset": "ar-sports-scoreboard.png",
+      "position": [4.6, 2.6, -2.5],
+      "scale": 2.2,
+      "float_amplitude": 0.1
+    },
+    "weather": {
+      "asset": "ar-weather-hologram.png",
+      "position": [-4.6, 5.0, -2.5],
+      "scale": 2.0,
+      "float_amplitude": 0.1
+    },
+    "breaking": {
+      "asset": "ar-breaking-news.png",
+      "position": [0.0, 5.2, -3.0],
+      "scale": 2.5,
+      "float_amplitude": 0.15
+    }
+  }
+}
