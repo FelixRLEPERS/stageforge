@@ -1,0 +1,11 @@
+{
+  "camera": "Canon EOS 5D Mark II",
+  "lens": "EF 40mm f/2.8 STM",
+  "sensor": "full-frame CMOS",
+  "crop_factor": 1.0,
+  "aperture_used": "f/4.0",
+  "native_iso": [100, 200, 400, 800, 1600, 3200, 6400],
+  "color_space": "sRGB",
+  "lut_path": null,
+  "gray_card_offset_ev": 0.0
+}
