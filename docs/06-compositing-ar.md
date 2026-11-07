@@ -106,3 +106,30 @@ run on an *empty* scene (1920x1080, `transparent_bg`). Real scenes
 with AR models, textures and lighting need their own measurement at
 pilot stage — 30 fps is the design target here, not a benchmark of a
 finished studio scene.
+
+## Backplate + occlusion shell (offline, MVP-adjacent)
+
+Flat quads cannot hide a prop behind a set piece, so the render layer
+can optionally load a **backplate**: an equirectangular panorama of the
+studio plus its monocular depth map, projected onto a point-cloud
+sphere (ADR-0006).
+
+```
+calibration/captures/panoramas/*.png      (gitignored, shot by hand)
+        |
+        v  python scripts/stage_reconstruct.py <panorama>
+assets/generated/backplates/*_depth.png   uint8, 0 = near .. 255 = far
+        |  + *_backplate.json metadata
+        v  copy into godot/assets/backplates/  (gitignored)
+godot/backplate_loader.gd  ->  occlusion.gdshader  ->  depth shell
+```
+
+- `godot/occlusion_quad.tscn` — the standalone scene wiring loader +
+  shader, so the shell can be previewed without touching `main.tscn`.
+- The shader samples `depth_tex` per vertex using the fibonacci
+  `(u, v)` recovered from the sphere direction — no sidecar blob for
+  geometry, the same formula runs in Python and GDScript.
+- **Idle by design:** `backplate_loader.gd` prints
+  `godot backplate: no *_backplate.json ... (loader idle)` and builds
+  nothing when no sidecar is present, so the studio demo above is
+  byte-for-byte unchanged until a panorama is shot.

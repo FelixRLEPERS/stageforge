@@ -34,6 +34,7 @@ nav:
       - ADR 0003: adr/0003-pull-based-capture-contract.md
       - ADR 0004: adr/0004-godot-blender-instead-of-ue5.md
       - ADR 0005: adr/0005-calibration-ccm-vs-grid.md
+      - ADR 0006: adr/0006-backplate-occlusion.md
 
 markdown_extensions:
   - admonition

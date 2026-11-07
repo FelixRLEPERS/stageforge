@@ -60,6 +60,30 @@ This path is not wired into the MVP; it is the pilot-phase replacement
 for monocular depth once broadcast cameras and a real depth sensor
 exist.
 
+### Panorama backplate + depth-quad occlusion (offline, MVP-adjacent)
+
+The studio has no metric 3D reconstruction yet, so virtual props
+cannot slide behind set pieces (ADR-0002: no depth sensor, no Free-D).
+An **offline** backplate path removes that dependency without Meshroom:
+
+- **Input** — an equirectangular studio panorama from
+  `calibration/captures/panoramas/` (gitignored, ADR-0005 captures).
+- **`compute_panorama_depth()`** (`reconstruction/backplate.py`) runs
+  the monocular network on **1024x1024 tiles** and stitches a
+  full-resolution **uint8** depth map (0 = nearest, 255 = farthest).
+- **`project_depth_to_sphere()`** returns a fibonacci lattice of
+  100 000 points on a unit sphere plus their equirectangular `(u, v)`.
+- **Export** — `scripts/stage_reconstruct.py` writes
+  `assets/generated/backplates/<name>_depth.png` + metadata sidecar
+  (both gitignored). Requires the `[ml]` extras.
+- **Consume** — `godot/backplate_loader.gd` +
+  `godot/occlusion.gdshader` sample the depth texture per vertex to
+  build an occlusion shell. Idle until a sidecar is copied into
+  `godot/assets/backplates/`, so the studio demo is unchanged.
+
+Full reasoning (tile seams, relative-not-metric, blocked on a physical
+panorama shoot) in [ADR 0006](adr/0006-backplate-occlusion.md).
+
 ## Fusion
 
 `Pipeline` pairs `Frame` + `CameraPose` + `DepthMap` by timestamp. A
@@ -84,6 +108,8 @@ outside it is logged as a sync warning.
 | `DepthProvider` | `SyntheticDepthProvider` | dry runs and tests |
 | `DepthProvider` | `StubDepthProvider` | scaffold placeholder |
 | `Tracker` | `StubTracker` | stub — Free-D is pilot phase |
+| (offline) `compute_panorama_depth` | `reconstruction/backplate.py` | **MVP-adjacent** — tiled depth for the occlusion backplate (ADR-0006) |
+| (offline) `project_depth_to_sphere` | `reconstruction/backplate.py` | unit-sphere lattice + equirect `(u, v)` |
 
 MVP implementation lives in `src/stageforge/`; the original hypothesis
 is kept as documentation in
