@@ -1,23 +1,10 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://main.gd" id="1_main"]
-[ext_resource type="Script" path="res://receiver.gd" id="2_recv"]
-
-[sub_resource type="BoxMesh" id="BoxMesh_cube"]
-size = Vector3(1.5, 1.5, 1.5)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cube"]
-albedo_color = Color(0.345, 0.66, 1, 1)
-metallic = 0.3
-roughness = 0.35
-
-[sub_resource type="PlaneMesh" id="PlaneMesh_plate"]
-size = Vector2(24, 13.5)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_plate"]
-transparency = 1
-shading_mode = 0
-albedo_color = Color(1, 1, 1, 1)
+[ext_resource type="Script" path="res://studio_builder.gd" id="2_studio"]
+[ext_resource type="Script" path="res://ar_loader.gd" id="3_ar"]
+[ext_resource type="Script" path="res://receiver.gd" id="4_recv"]
+[ext_resource type="Script" path="res://debug_ui.gd" id="5_hud"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
@@ -33,27 +20,24 @@ stretch = false
 
 [node name="SubViewport" type="SubViewport" parent="ViewportHost"]
 size = Vector2i(1920, 1080)
-transparent_bg = true
+transparent_bg = false
 render_target_update_mode = 4
 
 [node name="Scene3D" type="Node3D" parent="ViewportHost/SubViewport"]
 
 [node name="Camera3D" type="Camera3D" parent="ViewportHost/SubViewport/Scene3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 2.4, 7.5)
 current = true
+fov = 50.0
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="ViewportHost/SubViewport/Scene3D"]
-rotation_degrees = Vector3(-45, -30, 0)
+[node name="VirtualStudio" type="Node3D" parent="ViewportHost/SubViewport/Scene3D"]
+script = ExtResource("2_studio")
 
-[node name="Cube" type="MeshInstance3D" parent="ViewportHost/SubViewport/Scene3D"]
-mesh = SubResource("BoxMesh_cube")
-material_override = SubResource("StandardMaterial3D_cube")
-
-[node name="Plate" type="MeshInstance3D" parent="ViewportHost/SubViewport/Scene3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -3)
-mesh = SubResource("PlaneMesh_plate")
-material_override = SubResource("StandardMaterial3D_plate")
-cast_shadow = 0
+[node name="ARGroup" type="Node3D" parent="ViewportHost/SubViewport/Scene3D"]
+script = ExtResource("3_ar")
 
 [node name="Receiver" type="Node" parent="ViewportHost/SubViewport"]
-script = ExtResource("2_recv")
+script = ExtResource("4_recv")
+
+[node name="DebugUI" type="CanvasLayer" parent="."]
+script = ExtResource("5_hud")
