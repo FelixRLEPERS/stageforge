@@ -10,7 +10,7 @@ through the RGBA stream described in `docs/06-compositing-ar.md`.
 | | |
 |---|---|
 | Godot | **4.4+** (addon `compatibility_minimum=4.4`); tested on portable 4.5.1 at `D:\AstraForge\runtime\godot\Godot_v4.5.1-stable_win64.exe` |
-| NDI Runtime | **required for the optional NDI output** — free from <https://ndi.video/tools/ndi-core-suite/>; the godot-ndi addon auto-detects the installer. **Not needed for the local demo** — NDI is disabled there (`ndi_setup.gd` call commented out) and the shared-memory stream (`GodotOutputSink` → `receiver.gd`) carries the plate; install the Runtime to re-enable NDI on the pilot |
+| NDI Runtime | **installed on this machine** at `C:\Program Files\NDI\NDI 6 Runtime\v6` (v6.3.2, downloaded from <https://ndi.video/tools/>). **Not used by the local demo** — the GDExtension is renamed to `.disabled` (see Known limitations); the shared-memory stream (`GodotOutputSink` → `receiver.gd`) carries the plate |
 | godot-ndi addon | vendored at `addons/godot-ndi/` (MPL-2.0, Windows binaries; see `LICENSE` + `NOTICE.md`) |
 
 Godot is portable — no installer, no pip, nothing to add to PATH.
@@ -91,9 +91,8 @@ Main (main.gd)
                             deliberately outside the SubViewport so it never
                             reaches the broadcast output
 └─ NDISetup (Node)          ndi_setup.gd — optional NDI output, DISABLED for the
-                            local demo (call in main.gd `_ready()` is commented
-                            out; see Known limitations). Attach on the pilot
-                            after the NDI Runtime is installed.
+                            local demo (GDExtension renamed to `.disabled`, call
+                            in main.gd `_ready()` commented out; see NDI section)
 ```
 
 `main.gd` validates the contract on every start (`assert`) and measures
@@ -107,20 +106,23 @@ note below.
 ## NDI output — disabled for the local demo
 
 **The local demo uses Shared Memory (mmap) only**, through `receiver.gd`
-(`GodotOutputSink` → plate). NDI is deferred to the pilot because the
-vendored `godot-ndi` addon crashes Godot (signal 11) at shutdown when the
-NDI Runtime is absent, and the addon is off-limits to edit.
+(`GodotOutputSink` → plate). NDI is deferred to the pilot: the vendored
+`godot-ndi` GDExtension is **renamed to `.disabled`** because its teardown
+code crashes Godot (signal 11) *even with the NDI Runtime installed* —
+a bug inside the addon, off-limits to edit (see Known limitations).
 
 To bring NDI back on the pilot:
 
-1. Install the free NDI Runtime (link in Requirements) — the addon
-   auto-detects it.
-2. Uncomment `$NDISetup.attach($ViewportHost/SubViewport)` in `main.gd`
+1. Rename `addons/godot-ndi/godot-ndi.gdextension.disabled` →
+   `godot-ndi.gdextension` (re-enables the extension scan).
+2. Add `C:\Program Files\NDI\NDI 6 Runtime\v6` to `PATH` (the Runtime
+   installer does not do this on its own).
+3. Uncomment `$NDISetup.attach($ViewportHost/SubViewport)` in `main.gd`
    `_ready()`.
-3. Start the project, then OBS Studio → *Tools → NDI Source* (obs-ndi
+4. Start the project, then OBS Studio → *Tools → NDI Source* (obs-ndi
    plugin) → **Source name: `StageForge_Godot`** (alternative: NDI Studio
    Monitor, part of NDI Tools).
-4. **Alpha check:** not applicable while the studio demo renders an
+5. **Alpha check:** not applicable while the studio demo renders an
    opaque frame (`transparent_bg=false`). Re-enable it — a solid-colour
    source underneath must show through the empty areas — once the
    AR-over-live-feed mode restores `transparent_bg=true`.
@@ -140,19 +142,23 @@ Verified live: `godot.get_godot_version` → `4.5.1.stable.official`,
 
 ## Known limitations (measured on this machine)
 
-- **NDI is disabled for the local demo.** The vendored `godot-ndi` addon
-  crashes Godot on exit when the NDI Runtime is absent (signal 11 in
-  `load_runtime`'s teardown). Bisected: with `godot-ndi.gdextension`
-  renamed away the same run exits 0, so the fault is entirely in the
-  vendored addon, not in this project's scripts — and the addon is
-  deliberately left unmodified. **Decision:** keep NDI off for the local
-  demo (the `$NDISetup.attach(...)` call in `main.gd` is commented out),
-  so the run exits cleanly and Shared Memory (`receiver.gd`) is the only
-  transport. The NDI Runtime is still not installed on this dev machine
-  (`HKLM\SOFTWARE\NDI` absent); re-enable NDI on the pilot, after
-  installing the free Runtime.
-- No NDI/Spout verification was possible without the Runtime — the NDI
-  steps above are the manual acceptance test for the machine that has it.
+- **The `godot-ndi` GDExtension is renamed to `.disabled`.** Its teardown
+  code crashes Godot (signal 11) at shutdown — **even with the NDI
+  Runtime installed** (tested 2026-11-07: Runtime v6.3.2 loaded the DLL
+  without error, `NDIOutput` created OK, but the exit still segfaults).
+  Bisected to the extension itself: with the file renamed away every run
+  (import, headless, windowed) exits 0. The addon source is off-limits to
+  edit, so the durable fix is the rename — reversible, see the NDI section
+  above for re-enabling. Also observed with the extension active:
+  `Couldn't get viewport texture's RID on the RenderingDevice` floods
+  every frame (the addon uses RenderingDevice APIs, the project renders
+  `gl_compatibility`).
+- **NDI Runtime is installed but not on `PATH`.** The installer puts the
+  DLLs at `C:\Program Files\NDI\NDI 6 Runtime\v6` without adding the
+  directory to `PATH`; godot-ndi loads by bare filename, so the directory
+  must be on `PATH` manually (needs admin for machine-level `setx`).
+- No NDI/Spout verification was possible (the extension is disabled) —
+  the NDI steps above are the manual acceptance test for the pilot.
   Alternative if NDI is unwanted: [spout-gd](https://github.com/you-win/spout-gd)
   (Windows shared-texture output, same pattern: add the node inside the
   SubViewport).
@@ -168,13 +174,13 @@ Verified live: `godot.get_godot_version` → `4.5.1.stable.official`,
 |---|---|
 | `project.godot` | gl_compatibility renderer, 1920x1080, `max_fps=30` |
 | `main.tscn` / `main.gd` | scene contract + camera + keys + smoke asserts |
-| `ndi_setup.gd` | optional NDI output — **disabled** for the local demo (see NDI section) |
+| `ndi_setup.gd` | optional NDI output — **disabled** for the local demo (extension renamed `.disabled`; see NDI section) |
 | `studio_builder.gd` | environment, floor/walls, lights, `PresenterPlate` |
 | `ar_loader.gd` / `ar_config.json` | topic holograms, blend + float + billboard |
 | `debug_ui.gd` | window-only HUD (topic, fps, key map) |
 | `receiver.gd` | reads the Python RGBA stream (`GodotOutputSink`, seqlock) |
 | `assets/` | `.glb` exports from `blender/`; `assets/ar/` holds the copied AR PNGs (**gitignored**) |
-| `addons/godot-ndi/` | vendored NDI output addon (MPL-2.0) |
+| `addons/godot-ndi/` | vendored NDI output addon (MPL-2.0); `.gdextension` renamed to `.disabled` — see NDI section |
 | `tests/` | smoke scene for Phase 5 |
 
 ## Licenses
