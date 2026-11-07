@@ -77,7 +77,7 @@ def _load_mesh(path: str) -> trimesh.Trimesh | trimesh.Scene:
 def _scale_mesh(mesh: trimesh.Trimesh | trimesh.Scene, factor: float) -> None:
     # apply_scale is the idiomatic, safe path: it works on both Trimesh and
     # Scene (scaling every geometry inside the scene graph).
-    mesh.apply_scale(float(factor))
+    mesh.apply_scale(float(factor))  # type: ignore[no-untyped-call]
 
 
 def _export_glb(mesh: trimesh.Trimesh | trimesh.Scene, path: str) -> None:
@@ -158,7 +158,7 @@ def _convert_camera(cam: dict[str, Any]) -> dict[str, Any]:
     rot = _orthonormal_rotation(m_godot[:3, :3])
     rot_4x4 = np.eye(4, dtype=np.float64)
     rot_4x4[:3, :3] = rot
-    quat_wxyz = trimesh.transformations.quaternion_from_matrix(rot_4x4)
+    quat_wxyz = trimesh.transformations.quaternion_from_matrix(rot_4x4)  # type: ignore[no-untyped-call]
     quaternion = [
         float(quat_wxyz[1]),
         float(quat_wxyz[2]),
