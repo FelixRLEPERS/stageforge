@@ -9,11 +9,12 @@ Camera construction itself lives in :mod:`stageforge.orchestrator.cameras`.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from stageforge.calibration.step import build_calibrator
 from stageforge.capture.base import CaptureSource
 from stageforge.capture.multi import MultiCameraSource
 from stageforge.compositing.base import Compositor
@@ -44,6 +45,11 @@ DEFAULT_STORYLINK = "configs/storylink.yaml"
 __all__ = ["DEFAULT_STORYLINK", "MODES", "OUTPUT_MODES", "Chain", "build_chain"]
 
 
+def _identity_frame(frame: Frame) -> Frame:
+    """Calibration disabled: the frame passes through untouched."""
+    return frame
+
+
 @dataclass
 class Chain:
     """One fully wired pass through the pipeline, ready to run."""
@@ -57,6 +63,7 @@ class Chain:
     storylink: YamlStoryLink
     topic: str
     multi: MultiCameraSource | None = None
+    calibrate: Callable[[Frame], Frame] = _identity_frame
 
     @property
     def desyncs(self) -> int:
@@ -122,6 +129,7 @@ def build_chain(config: Mapping[str, Any], dry_run: bool = False) -> Chain:
             )
         ),
         sink=_build_output(mapping(config, "output")),
+        calibrate=build_calibrator(mapping(config, "calibration")),
         storylink=_build_storylink(config),
         topic=str(compositor_cfg.get("topic", "")),
     )

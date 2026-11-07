@@ -54,6 +54,12 @@ compositing:
   topic: "military_tech"       # key into configs/storylink.yaml
   background_shade: 0.55       # brightness the keyed-out background keeps
 
+calibration:
+  enabled: false               # on once a profile exists (scripts/calibrate.py --build)
+  profile: "calibration/profiles/canon_5d_mk2_50mm_1.8.json"
+  mode: "ccm"                  # ccm (ADR-0005) | cube (deferred to the pilot)
+  apply_before: "reconstruction"   # "segmentation" is deferred (ADR-0005)
+
 output:
   mode: "file"                 # file | ndi | godot | null
   # mode: "godot"              # RGBA stream -> godot/receiver.gd (docs/06)

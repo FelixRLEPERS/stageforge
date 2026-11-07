@@ -140,7 +140,7 @@ class StageForgePipeline:
                     # carries one frame per camera.
                     frames = frames[: max_frames - processed]
                 for frame in frames:
-                    self._process(chain, frame)
+                    self._process(chain, chain.calibrate(frame))
                 latencies.append((perf_counter() - before) * 1000.0 / max(1, len(frames)))
                 processed += len(frames)
                 if processed % _LOG_EVERY == 0:
