@@ -10,7 +10,7 @@ through the RGBA stream described in `docs/06-compositing-ar.md`.
 | | |
 |---|---|
 | Godot | **4.4+** (addon `compatibility_minimum=4.4`); tested on portable 4.5.1 at `D:\AstraForge\runtime\godot\Godot_v4.5.1-stable_win64.exe` |
-| NDI Runtime | optional — <http://ndi.link/NDIRedistV6> (proprietary, free) |
+| NDI Runtime | **required for `NDIOutput`** — free from <https://ndi.video/tools/ndi-core-suite/>; the godot-ndi addon auto-detects the installer. Without it the NDI leg logs `godot ndi: SKIP`, while the shared-memory stream (`GodotOutputSink` → `receiver.gd`) works independently |
 | godot-ndi addon | vendored at `addons/godot-ndi/` (MPL-2.0, Windows binaries; see `LICENSE` + `NOTICE.md`) |
 
 Godot is portable — no installer, no pip, nothing to add to PATH.

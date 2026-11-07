@@ -100,3 +100,9 @@ transport inside it (or select `output.mode: "ndi"`), and on the Godot
 side replace `receiver.gd` with the vendored `NDIOutput` node
 (`godot/addons/godot-ndi`, wired by `godot/main.gd` — see
 `godot/README.md`).
+
+**Measured (2026-11-07, headless):** the 30.6 fps figure is a smoke
+run on an *empty* scene (1920x1080, `transparent_bg`). Real scenes
+with AR models, textures and lighting need their own measurement at
+pilot stage — 30 fps is the design target here, not a benchmark of a
+finished studio scene.

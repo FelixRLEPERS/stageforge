@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `segmentation`: `DepthAlphaSegmenter` (percentile stretch + optional
     morphology), `metric.py` for the future depth-sensor pilot.
   - `compositing`: `Simple2DCompositor` + `assets.py` loader/placeholders
-    (no Unreal bridge required).
+    (no external render bridge required).
   - `output`: `FileOutputSink`, `NDIOutputSink` (degrades to a counted
     no-op when `ndi-python` is absent), `NullOutputSink`.
   - `storylink`: `YamlStoryLink` resolving `configs/storylink.yaml`.
@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `blender/` — `export_for_godot.py` glTF 2.0 export + MCP bridge;
   `output.GodotOutputSink` (`output.mode: "godot"`, file-backed RGBA
   buffer with seqlock); OpenCode MCP servers `godot` and `blender`.
+  Headless smoke measured 30.6 fps on an *empty* scene (1920x1080,
+  transparent_bg) — real scenes with AR models and lighting need a
+  separate measurement at pilot stage.
 - ADR 0002 (`monocular-depth-contract`) and ADR 0003
   (`pull-based-capture-contract`), both indexed in `docs/adr/README.md`
   and `mkdocs.yml`.
