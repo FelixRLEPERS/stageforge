@@ -30,6 +30,30 @@ via SDI Key/Fill or NDI.
 
 See [docs/02-architecture.md](docs/02-architecture.md).
 
+## 🎬 Live Studio Demo (Godot)
+
+![StageForge virtual studio demo](assets/readme/godot_demo.png)
+
+The render layer runs the whole chain live: the Python pipeline writes
+one RGBA frame slot to disk (`GodotOutputSink` → `out/godot_frame.rgba`),
+`godot/receiver.gd` picks it up as the presenter plate, and Godot
+composites it into a 1920×1080 virtual studio — floor, walls, lights,
+plate with the feed, plus a broadcast HUD. Measured at a steady 30 fps
+on `gl_compatibility`.
+
+```bash
+# 1) feed the plate (synthetic mode: no camera, no GPU)
+#    set output.mode: "godot" in your config — see docs/06-compositing-ar.md
+python -m stageforge.orchestrator --config configs/dev.yaml --dry-run --frames 30
+
+# 2) render it (portable Godot 4.4+, see godot/README.md for the run modes)
+godot --path godot
+```
+
+Keys: `1`–`4` switch the topic (finance / sports / weather / breaking),
+`Space` hides or shows the AR group, `Esc` quits. Full walkthrough:
+[`godot/README.md`](godot/README.md).
+
 ## Status
 
 🚧 Pre-MVP scaffold. See [docs/11-roadmap.md](docs/11-roadmap.md).
