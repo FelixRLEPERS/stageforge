@@ -1,2 +1,13 @@
 # Godot 4 editor/import cache — regenerated locally, never committed.
 .godot/
+
+# Runtime copy the extension loader makes next to the addon DLL (Windows
+# file-lock workaround). Regenerated on every run, never committed.
+addons/godot-ndi/bin/windows/~*.dll
+
+# AR hologram textures: Qwen-generated PNGs live in assets/generated/ and
+# must never enter the public repo (AGENTS.md — Qwen Research License vs
+# Apache-2.0). They are copied here for the demo only, by hand or via
+# scripts/copy_ar_assets.ps1. Ignored at the source, not the file, so the
+# whole folder stays out of git regardless of how many assets are added.
+assets/ar/
