@@ -1,0 +1,23 @@
+; Engine configuration file.
+; StageForge real-time render layer (ADR-0004): Godot 4.4+ / tested on 4.5.1.
+; Godot is portable: D:\AstraForge\runtime\godot\Godot_v4.5.1-stable_win64.exe
+
+config_version=5
+
+[application]
+
+config/name="StageForge Godot Layer"
+run/main_scene="res://main.tscn"
+run/max_fps=30
+config/features=PackedStringArray("4.4")
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.051, 0.067, 0.11, 1)
