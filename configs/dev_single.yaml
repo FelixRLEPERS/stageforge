@@ -46,7 +46,9 @@ compositing:
   background_shade: 0.55       # brightness the keyed-out background keeps
 
 output:
-  mode: "file"                 # file | ndi | null
+  mode: "file"                 # file | ndi | godot | null
+  # mode: "godot"              # RGBA stream -> godot/receiver.gd (docs/06)
+  # shm_path: "out/godot_frame.rgba"
   out_dir: "out"
   ndi_name: "StageForge Preview"
   sink: null                   # scaffold contract: sdi | ndi | null

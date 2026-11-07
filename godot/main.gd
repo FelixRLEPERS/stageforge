@@ -37,6 +37,8 @@ func _validate_scene() -> void:
 		"SubViewport.render_target_update_mode must be Always (NDI while unfocused)"
 	)
 	assert($ViewportHost/SubViewport/Scene3D/Cube != null, "Cube placeholder missing")
+	assert($ViewportHost/SubViewport/Scene3D/Plate != null, "Plate (stream target) missing")
+	assert($ViewportHost/SubViewport/Receiver != null, "Receiver (stream reader) missing")
 	print("godot smoke: viewport contract PASS (1920x1080, transparent_bg=true)")
 
 

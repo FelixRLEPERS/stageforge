@@ -56,3 +56,47 @@ plate arrives.
 `Compositor` and `StoryLink` are stubs. Prototype
 [`prototypes/p03-story-link-mvp`](https://github.com/stageforge/stageforge/blob/main/prototypes/p03-story-link-mvp/README.md)
 proves the cue→asset mapping independently of Unreal.
+
+## Python → Godot: RGBA stream
+
+The bridge between this pipeline and the Godot renderer (ADR-0004) is
+one frame slot on disk, written by
+[`GodotOutputSink`](../src/stageforge/output/godot_sink.py) and
+consumed by [`godot/receiver.gd`](../godot/receiver.gd):
+
+```
+L4 Compositor ── Fill (BGR) + AlphaMask ──► GodotOutputSink
+                                               │ file-backed mmap,
+                                               │ seqlock header
+                                               ▼
+                          out/godot_frame.rgba   (40 B header + RGBA8)
+                                               │ FileAccess
+                                               ▼
+             receiver.gd → plate texture → Scene3D (keyed plate + AR cube,
+             cube over plate) → SubViewport (transparent, 1920x1080)
+                                               │
+                                               ▼
+                                   NDIOutput / Spout → air
+```
+
+**File layout** (little-endian): `magic "SGFRM01\n" | width u32 |
+height u32 | seq u64 | timestamp_us u64 | format u32 (0 = RGBA8) |
+pad 4 B | RGBA8 pixels`. `seq` is a seqlock counter — odd while the
+writer is mid-frame, even when the slot is coherent; the receiver
+drops odd/torn frames instead of ever showing them.
+
+**Transport choice** (config `output.mode: "godot"`, optional key
+`shm_path`, default `out/godot_frame.rgba`; the receiver honours
+`STAGEFORGE_GODOT_SHM` to point elsewhere):
+
+| Option | Verdict on this machine |
+|---|---|
+| `multiprocessing.shared_memory` (anonymous named mapping) | **rejected** — GDScript has no API to open anonymous mappings; the two sides could never meet on one object |
+| NDI (`output.mode: "ndi"` → `NDIOutputSink` → NDI in Godot) | **not testable here** — NDI Runtime absent (`HKLM\SOFTWARE\NDI` missing); remains one config switch away once the runtime is installed |
+| **file-backed mmap + seqlock** | **chosen** — no daemon, no DLL, no sockets; the system cache makes writer and reader coherent on one machine; Godot reads it with plain `FileAccess` |
+
+To move to NDI later: keep `GodotOutputSink`'s contract and swap the
+transport inside it (or select `output.mode: "ndi"`), and on the Godot
+side replace `receiver.gd` with the vendored `NDIOutput` node
+(`godot/addons/godot-ndi`, wired by `godot/main.gd` — see
+`godot/README.md`).

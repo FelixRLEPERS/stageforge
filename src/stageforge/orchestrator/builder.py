@@ -23,6 +23,7 @@ from stageforge.core.types import Frame
 from stageforge.orchestrator.cameras import build_capture, mapping
 from stageforge.output.base import OutputSink
 from stageforge.output.file_sink import FileOutputSink
+from stageforge.output.godot_sink import GodotOutputSink
 from stageforge.output.ndi_sink import NDIOutputSink
 from stageforge.output.null_sink import NullOutputSink
 from stageforge.reconstruction.base import DepthProvider
@@ -37,7 +38,7 @@ from stageforge.segmentation.depth_alpha import DepthAlphaSegmenter
 from stageforge.storylink.yaml_provider import YamlStoryLink
 
 MODES = ("monocular", "synthetic")
-OUTPUT_MODES = ("file", "ndi", "null")
+OUTPUT_MODES = ("file", "ndi", "godot", "null")
 DEFAULT_STORYLINK = "configs/storylink.yaml"
 
 __all__ = ["DEFAULT_STORYLINK", "MODES", "OUTPUT_MODES", "Chain", "build_chain"]
@@ -148,6 +149,8 @@ def _build_output(output_cfg: Mapping[str, Any]) -> OutputSink:
         return FileOutputSink(out_dir=str(output_cfg.get("out_dir", "out")))
     if mode == "ndi":
         return NDIOutputSink(name=str(output_cfg.get("ndi_name", "StageForge Preview")))
+    if mode == "godot":
+        return GodotOutputSink(shm_path=str(output_cfg.get("shm_path", "out/godot_frame.rgba")))
     if mode == "null":
         return NullOutputSink()
     raise ValueError(f"unknown output.mode {mode!r}, expected one of {OUTPUT_MODES}")
