@@ -40,6 +40,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Headless smoke measured 30.6 fps on an *empty* scene (1920x1080,
   transparent_bg) — real scenes with AR models and lighting need a
   separate measurement at pilot stage.
+- **ColorChecker calibration package** (ADR-0005): `src/stageforge/calibration/`
+  — reference values for the 24-patch chart + synthetic generator,
+  Canny/quad patch detection with a manual `--rect` fallback,
+  least-squares **3x3 CCM** (numpy only, no scipy), `.ccm`/`.cube`
+  writers, frame application (CCM / trilinear cube / EV offset) and a
+  config-gated calibrator compiled by `builder.py` and applied in the
+  run loop before depth estimation. `scripts/calibrate.py` CLI
+  (`--capture` / `--build` / `--test-frame` / `--grey`), two empty
+  per-lens profile templates (50 mm, 40 mm) and `calibration/README.md`
+  one-time procedure. `calibration.enabled: false` by default (identity);
+  captures, `*.ccm` and `*.cube` are gitignored.
 - ADR 0002 (`monocular-depth-contract`) and ADR 0003
   (`pull-based-capture-contract`), both indexed in `docs/adr/README.md`
   and `mkdocs.yml`.
@@ -71,6 +82,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `configs/dev_single.yaml` — single-camera variant of `dev.yaml` for
   benches where only the index-1 UVC device delivers frames (the
   two-camera wrapper ends the run on the silent one).
+- Tests: `test_calibration_reference`, `test_calibration_apply`,
+  `test_calibration_build_lut`, `test_calibration_detect`,
+  `test_calibration_profiles` (all on synthetic chart data — no
+  physical ColorChecker needed in CI).
 - Tests: `test_onnx_output_shape`, `test_onnx_backend_matches_transformers`
   (≤ 5 % of range), `test_onnx_missing_model_points_at_export_script`,
   `test_unknown_backend_is_rejected`.
@@ -85,8 +100,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so the alpha layer can consume monocular depth.
 - `configs/dev.yaml` extended with the MVP keys (`mode`, `camera`,
   `reconstruction`, `segmentation`, `compositing`, `output.mode`,
-  `storylink`); the original scaffold keys are retained below a
-  separator for reference.
+  `storylink`, `calibration`); the original scaffold keys are retained
+  below a separator for reference.
 - `docs/03-capture.md`, `04-reconstruction-tracking.md`,
   `05-segmentation-alpha.md`, `07-output-delivery.md`,
   `11-roadmap.md`, `prototypes/p01-depth-mvp/README.md` updated to the

@@ -19,6 +19,19 @@ Precedence: CLI flags > environment (`STAGEFORGE_*`) > YAML > defaults.
 ### MVP keys (read by `src/stageforge/orchestrator/builder.py`)
 
 ```yaml
+calibration:
+  enabled: false               # off until a profile exists (ADR-0005)
+  profile: "calibration/profiles/canon_5d_mk2_50mm_1.8.json"
+  mode: "ccm"                  # ccm | cube (cube deferred to the pilot)
+  apply_before: "reconstruction"   # "segmentation" accepted but deferred
+```
+
+`enabled: false` compiles to an identity function, so an absent or
+disabled block is a no-op. When enabled, `profile` must be a
+`CameraProfile` JSON with a `lut_path`; the build fails fast (before
+any device opens) if it is missing or invalid.
+
+```yaml
 mode: monocular                # monocular | synthetic (--dry-run forces synthetic)
 
 camera:

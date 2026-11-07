@@ -57,6 +57,33 @@ dropped frame to a late one. Plugging the two cards into **different USB
 controllers** (not a shared hub) keeps the drift small enough to stay
 under the threshold.
 
+## Color calibration
+
+Camera colour is calibrated once per camera + lens pair with a
+ColorChecker chart instead of a manual 125-point grid (ADR-0005):
+
+| Artefact | Producer | Consumer |
+|---|---|---|
+| `.ccm` — 3x3 matrix | `scripts/calibrate.py --build` (24 patches, `numpy.linalg.lstsq`) | `calibration/apply.py` via `calibration.enabled` |
+| profile JSON | `save_profile()` (camera, lens, `aperture_used`, EV) | `calibration/step.py` |
+| `.cube` 17³ (optional) | `--cube` flag, same matrix sampled | external tools / 10-bit pilot |
+| EV offset | `--grey` (18% card) | applied as `frame * 2**EV` before the matrix |
+
+`calibration.enabled: false` (the default) compiles to an identity
+function: the pipeline behaves exactly as before. When enabled, the
+builder loads the profile once at start-up and the run loop applies
+EV + CCM to every frame *before* depth estimation, so Depth Anything
+V2 and the segmenter always see corrected colour.
+
+The one-time studio procedure (~30 minutes) lives in
+[`calibration/README.md`](../calibration/README.md) — frame a chart,
+`--capture`, `--build`, `--test-frame`, then flip `enabled: true`.
+
+MVP limits: the 5D Mark II is 8-bit sRGB (no log), so a linear matrix
+is enough for stable depth inference (≈ ΔE 2–3 on mid-tones); the full
+17³ `.cube` path and `apply_before: segmentation` are deferred to the
+pilot. Generated captures and LUTs stay gitignored.
+
 ## Contract
 
 `capture.CaptureSource` (see `src/stageforge/capture/base.py`):

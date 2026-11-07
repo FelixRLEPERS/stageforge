@@ -46,17 +46,19 @@ def generate_lut_from_patches(
 ) -> npt.NDArray[np.float32]:
     """Sample the CCM over a regular grid -> ``(S, S, S, 3)`` .cube data.
 
-    Layout is ``[blue][green][red]`` so a flat C-order walk reproduces
-    the Adobe .cube order (red changes fastest).
+    Layout is ``[blue][green][red]`` — the flat C-order walk then puts
+    red on the fastest axis, which is the Adobe .cube line order that
+    ``write_cube`` / ``load_cube`` assume. Value axis is ``(red,
+    green, blue)`` in 0..1.
     """
     if grid_size < 2:
         raise ValueError(f"grid_size must be >= 2, got {grid_size}")
     ccm = compute_ccm(measured_srgb, reference_srgb)
     axes = np.linspace(0.0, 1.0, grid_size, dtype=np.float64)
     count = grid_size * grid_size
-    red = np.repeat(axes, count)  # fastest axis, per .cube spec
+    blue = np.repeat(axes, count)  # slowest axis
     green = np.tile(np.repeat(axes, grid_size), grid_size)
-    blue = np.tile(axes, count)
+    red = np.tile(axes, count)  # fastest axis, per .cube spec
     nodes = np.stack((red, green, blue), axis=-1)
     corrected = np.clip(nodes @ ccm.astype(np.float64), 0.0, 1.0)
     return corrected.reshape(grid_size, grid_size, grid_size, 3).astype(np.float32)

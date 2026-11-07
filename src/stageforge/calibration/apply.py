@@ -15,11 +15,13 @@ import numpy as np
 import numpy.typing as npt
 
 from stageforge.calibration.build_lut import FloatArray
+from stageforge.calibration.reference import GREY_CARD_18_SRGB
 
 __all__ = [
     "apply_ccm_to_frame",
     "apply_cube_lut_to_frame",
     "apply_ev_offset",
+    "compute_ev_offset_from_grey_card",
     "load_ccm",
     "load_cube",
 ]
@@ -42,36 +44,42 @@ def apply_ccm_to_frame(frame_bgr: npt.NDArray[np.uint8], ccm: FloatArray) -> npt
 def apply_cube_lut_to_frame(
     frame_bgr: npt.NDArray[np.uint8], cube_lut: FloatArray
 ) -> npt.NDArray[np.uint8]:
-    """Resample a ``(S, S, S, 3)`` cube (blue, green, red axes) per pixel.
+    """Resample a ``(S, S, S, 3)`` cube (``[blue][green][red]`` axes) per pixel.
 
-    Trilinear: eight neighbours per pixel, blended along red, then
-    green, then blue — the same sampling a broadcast LUT box does.
+    Trilinear: eight neighbours per pixel, blended along red (the
+    fastest axis), then green, then blue — the same sampling a broadcast
+    LUT box does. Cube values are 0..1 with a ``(red, green, blue)``
+    value axis, matching ``write_cube`` / ``load_cube``; the result is
+    scaled back to 0..255 and rounded to the nearest level.
     """
     _check_frame(frame_bgr)
     cube = np.asarray(cube_lut, dtype=np.float32)
     if cube.ndim != 4 or cube.shape[3] != 3 or len(set(cube.shape[:3])) != 1:
         raise ValueError(f"expected (S, S, S, 3) cube, got {cube.shape}")
     size = cube.shape[0]
+    # frame is BGR; position/weights are in (red, green, blue) to match
+    # the cube's value axis, while the cube itself is indexed blue-first
     rgb = np.asarray(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB), dtype=np.float32)
     position = rgb * ((size - 1) / 255.0)
     base = np.floor(position)
-    low = np.clip(base.astype(np.intp), 0, size - 1)
-    high = np.minimum(low + 1, size - 1)
-    # per-channel blend weight, broadcast over the three colour components
-    fraction = position - base
-    tr = fraction[..., 0:1]
-    tg = fraction[..., 1:2]
-    tb = fraction[..., 2:3]
-    r0, g0, b0 = low[..., 0], low[..., 1], low[..., 2]
-    r1, g1, b1 = high[..., 0], high[..., 1], high[..., 2]
-    c00 = cube[r0, g0, b0] + (cube[r0, g0, b1] - cube[r0, g0, b0]) * tb
-    c01 = cube[r0, g1, b0] + (cube[r0, g1, b1] - cube[r0, g1, b0]) * tb
-    c10 = cube[r1, g0, b0] + (cube[r1, g0, b1] - cube[r1, g0, b0]) * tb
-    c11 = cube[r1, g1, b0] + (cube[r1, g1, b1] - cube[r1, g1, b0]) * tb
-    c0 = c00 + (c01 - c00) * tg
-    c1 = c10 + (c11 - c10) * tg
-    out = c0 + (c1 - c0) * tr
-    return np.asarray(np.clip(out, 0.0, 255.0), dtype=np.uint8)
+    lo = np.clip(base.astype(np.intp), 0, size - 1)
+    hi = np.minimum(lo + 1, size - 1)
+    weight = position - base  # (H, W, 3) -> red, green, blue fractions
+    r_lo, g_lo, b_lo = lo[..., 0], lo[..., 1], lo[..., 2]
+    r_hi, g_hi, b_hi = hi[..., 0], hi[..., 1], hi[..., 2]
+    fr = weight[..., 0:1]
+    fg = weight[..., 1:2]
+    fb = weight[..., 2:3]
+    # blend the fastest axis (red) first, then green, then blue
+    c00 = cube[b_lo, g_lo, r_lo] + (cube[b_lo, g_lo, r_hi] - cube[b_lo, g_lo, r_lo]) * fr
+    c01 = cube[b_lo, g_hi, r_lo] + (cube[b_lo, g_hi, r_hi] - cube[b_lo, g_hi, r_lo]) * fr
+    c10 = cube[b_hi, g_lo, r_lo] + (cube[b_hi, g_lo, r_hi] - cube[b_hi, g_lo, r_lo]) * fr
+    c11 = cube[b_hi, g_hi, r_lo] + (cube[b_hi, g_hi, r_hi] - cube[b_hi, g_hi, r_lo]) * fr
+    c0 = c00 + (c01 - c00) * fg
+    c1 = c10 + (c11 - c10) * fg
+    out = (c0 + (c1 - c0) * fb) * 255.0
+    clipped = np.rint(np.clip(out, 0.0, 255.0)).astype(np.uint8)
+    return np.asarray(cv2.cvtColor(clipped, cv2.COLOR_RGB2BGR), dtype=np.uint8)
 
 
 def apply_ev_offset(frame_bgr: npt.NDArray[np.uint8], ev: float) -> npt.NDArray[np.uint8]:
@@ -84,6 +92,27 @@ def apply_ev_offset(frame_bgr: npt.NDArray[np.uint8], ev: float) -> npt.NDArray[
         return frame_bgr
     scaled = frame_bgr.astype(np.float32) * float(2.0**ev)
     return np.asarray(np.clip(scaled, 0.0, 255.0), dtype=np.uint8)
+
+
+def compute_ev_offset_from_grey_card(
+    image_bgr: npt.NDArray[np.uint8], target_srgb: float = GREY_CARD_18_SRGB
+) -> float:
+    """EV offset from an 18% grey card: ``log2(target / measured)``.
+
+    The centre half of the frame is assumed to be the card (the CLI
+    frames it that way). Returns ``0.0`` for an already-correct card
+    and clamps to +/-3 EV; raises ``ValueError`` if the card reads as
+    pure black. Extracted from ``scripts/calibrate.py --grey`` so tests
+    and a future live mode can share it.
+    """
+    if image_bgr.ndim != 3 or image_bgr.shape[2] != 3:
+        raise ValueError(f"expected BGR frame (H, W, 3), got shape {image_bgr.shape}")
+    height, width = image_bgr.shape[:2]
+    patch = image_bgr[height // 4 : 3 * height // 4, width // 4 : 3 * width // 4]
+    level = float(np.asarray(cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY), dtype=np.float64).mean())
+    if level <= 0:
+        raise ValueError("grey card reads as pure black - check the exposure")
+    return float(np.clip(np.log2(target_srgb / level), -3.0, 3.0))
 
 
 def load_ccm(path: str | Path) -> npt.NDArray[np.float32]:

@@ -28,6 +28,7 @@ from stageforge.calibration.apply import (
     apply_ccm_to_frame,
     apply_cube_lut_to_frame,
     apply_ev_offset,
+    compute_ev_offset_from_grey_card,
     load_ccm,
     load_cube,
 )
@@ -63,7 +64,11 @@ def _patches(image: npt.NDArray[np.uint8], rect: Any) -> npt.NDArray[np.float32]
         return sample_grid_in_rect(image, rect)
     found = find_colorchecker_patches(image)
     if found is None:
-        raise SystemExit("no ColorChecker grid found - pass --rect X,Y,W,H (manual fallback)")
+        raise SystemExit(
+            "ColorChecker not found on the frame. Options:\n"
+            "  1. Check the chart is fully in frame (all 24 patches visible).\n"
+            "  2. If auto-detect fails, pass --rect X,Y,W,H to set the grid box manually."
+        )
     return found
 
 
@@ -123,16 +128,14 @@ def test_frame(args: argparse.Namespace) -> int:
 def grey(args: argparse.Namespace) -> int:
     """18% grey card photo -> gray_card_offset_ev in the profile."""
     image = _load(args.input)
-    height, width = image.shape[:2]
-    patch = image[height // 4 : 3 * height // 4, width // 4 : 3 * width // 4]
-    level = float(cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY).mean())
-    if level <= 0:
-        raise SystemExit("grey card reads as black - check the exposure")
-    ev = float(np.clip(np.log2(GREY_CARD_18_SRGB / level), -3.0, 3.0))
+    try:
+        ev = compute_ev_offset_from_grey_card(image)
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
     profile = load_profile(args.profile)
     profile.gray_card_offset_ev = ev
     save_profile(profile, args.profile)
-    print(f"grey card: measured={level:.1f} target={GREY_CARD_18_SRGB} -> ev={ev:+.2f}")
+    print(f"grey card: target={GREY_CARD_18_SRGB} -> ev={ev:+.2f}")
     return 0
 
 
