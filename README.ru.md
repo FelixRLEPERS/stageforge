@@ -86,7 +86,7 @@ pip install transformers timm
 
 ## Документация
 
-Вся документация — в каталоге [`docs/`](docs/00-index.md).
+Вся документация — в каталоге [`docs/`](docs/index.md).
 Английский оригинал: [`README.md`](README.md).
 
 ## Участие в разработке

@@ -71,7 +71,7 @@ reconstruction = [
 
 [project.urls]
 Homepage = "https://github.com/FelixRLEPERS/stageforge"
-Documentation = "https://github.com/FelixRLEPERS/stageforge/blob/main/docs/00-index.md"
+Documentation = "https://github.com/FelixRLEPERS/stageforge/blob/main/docs/index.md"
 Changelog = "https://github.com/FelixRLEPERS/stageforge/blob/main/CHANGELOG.md"
 Issues = "https://github.com/FelixRLEPERS/stageforge/issues"
 

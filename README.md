@@ -85,7 +85,7 @@ depth backend add `pip install -e ".[onnx-gpu]"` — or `".[onnx]"` for CPU
 
 ## Documentation
 
-All documentation lives in [`docs/`](docs/00-index.md). Russian
+All documentation lives in [`docs/`](docs/index.md). Russian
 translation: [`README.ru.md`](README.ru.md).
 
 ## Contributing

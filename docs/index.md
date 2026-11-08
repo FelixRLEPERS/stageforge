@@ -1,13 +1,13 @@
 # StageForge Documentation Index
 
 Welcome. This is the single entry point to every document in the
-repository. Read `00-index.md` first, then `02-architecture.md`.
+repository. Read `index.md` first, then `02-architecture.md`.
 
 ## Quick links
 
 | # | Document | What it answers |
 |---|----------|-----------------|
-| 00 | [Index](00-index.md) | Where do I start? |
+| 00 | [Index](index.md) | Where do I start? |
 | 01 | [Getting started](01-getting-started.md) | How do I run it locally? |
 | 02 | [Architecture](02-architecture.md) | How do the 5 layers fit together? |
 | 03 | [Capture](03-capture.md) | How do SDI/NDI frames enter the pipeline? |

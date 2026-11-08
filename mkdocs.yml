@@ -13,7 +13,7 @@ theme:
   highlightjs: true
 
 nav:
-  - Home: 00-index.md
+  - Home: index.md
   - Getting started: 01-getting-started.md
   - Architecture:
       - Overview: 02-architecture.md

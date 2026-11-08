@@ -62,7 +62,7 @@ What was decided, stated as "We will …".
 ## Workflow
 
 1. Open a pull request that adds only the ADR (plus a link from
-   `docs/00-index.md` if it deserves visibility).
+   `docs/index.md` if it deserves visibility).
 2. Review focuses on whether the *context* is honest, not on whether we
    like the decision.
 3. Merge together with the code that implements it.
