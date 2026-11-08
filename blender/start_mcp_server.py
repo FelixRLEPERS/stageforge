@@ -19,19 +19,19 @@ import bpy
 try:
     bpy.ops.preferences.addon_enable(module="blender_mcp")
     print("ADDON ENABLED")
-except Exception as exc:  # noqa: BLE001 — surfaced verbatim for the caller
+except Exception as exc:
     print(f"ADDON ENABLE FAILED: {exc}")
 
 # 2) make sure this session auto-starts the socket server
 try:
     bpy.context.scene.blendermcp_auto_start_server = True
     print("AUTO_START=True")
-except Exception as exc:  # noqa: BLE001
+except Exception as exc:
     print(f"AUTO_START set failed: {exc}")
 
 # 3) belt & braces: start the server directly (idempotent if already up)
 try:
     bpy.ops.blendermcp.start_server()
     print("SERVER START REQUESTED")
-except Exception as exc:  # noqa: BLE001
+except Exception as exc:
     print(f"start_server: {exc}")

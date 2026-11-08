@@ -23,7 +23,7 @@ try:
 except ModuleNotFoundError:
     sys.exit("run with: blender --background --python blender/test_export.py")
 
-import bmesh  # noqa: E402  — Blender-only module, after the bpy guard
+import bmesh
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parent / "godot" / "assets" / "test_cube.glb"
