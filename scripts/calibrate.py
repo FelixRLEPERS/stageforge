@@ -8,6 +8,15 @@ Workflow (details in calibration/README.md):
     python scripts/calibrate.py --test-frame --input calibration/captures/raw_TS.png \\
         --profile calibration/profiles/canon_5d_mk2_50mm_1.8.json
 
+Test day is one call per camera: without ``--input`` the frame is
+grabbed from ``--camera`` after an auto-exposure warm-up.
+
+    python scripts/calibrate.py --quick --camera 0 --camera-name "Canon EOS 5D Mark IV" \\
+        --profile calibration/profiles/canon_5d_mk2_50mm_1.8.json
+
+``--quick`` fits what it sees: chart -> CCM + residual report, or the
+centre 18% card -> EV trim with a warning that no matrix was fitted.
+
 Nothing here runs in CI: a physical chart (or its print-out) is needed
 once per camera + lens pair; the resulting .ccm stays gitignored and
 the empty profile JSON travels with the repo.
@@ -40,6 +49,7 @@ from stageforge.calibration.build_lut import (
 )
 from stageforge.calibration.detect import find_colorchecker_patches, sample_grid_in_rect
 from stageforge.calibration.profiles import load_profile, save_profile
+from stageforge.calibration.quick import RESIDUAL_WARN_PCT, quick_calibrate
 from stageforge.calibration.reference import COLORCHECKER_CLASSIC_SRGB, GREY_CARD_18_SRGB
 
 CAPTURES = Path("calibration/captures")
@@ -74,14 +84,42 @@ def _patches(image: npt.NDArray[np.uint8], rect: Any) -> npt.NDArray[np.float32]
 
 def capture(args: argparse.Namespace) -> int:
     """Grab one frame with the chart in view -> captures/raw_<ts>.png."""
-    camera = cv2.VideoCapture(args.camera)
-    if not camera.isOpened():
-        raise SystemExit(f"cannot open camera index {args.camera}")
-    ok, frame = camera.read()
-    camera.release()
-    if not ok or frame is None:
-        raise SystemExit(f"camera index {args.camera} returned no frame")
-    _save(np.asarray(frame, dtype=np.uint8), CAPTURES / f"raw_{_stamp()}.png")
+    _save(_grab(args.camera), CAPTURES / f"raw_{_stamp()}.png")
+    return 0
+
+
+def _grab(camera: int, warmup: int = 5) -> npt.NDArray[np.uint8]:
+    """Open *camera*, discard *warmup* frames (auto-exposure settles), keep the last."""
+    cap = cv2.VideoCapture(camera)
+    if not cap.isOpened():
+        raise SystemExit(f"cannot open camera index {camera}")
+    frame: npt.NDArray[np.uint8] | None = None
+    try:
+        for _ in range(warmup):
+            ok, image = cap.read()
+            if ok and image is not None:
+                frame = np.asarray(image, dtype=np.uint8)
+    finally:
+        cap.release()
+    if frame is None:
+        raise SystemExit(f"camera index {camera} returned no frame")
+    return frame
+
+
+def quick(args: argparse.Namespace) -> int:
+    """One shot: chart (or centre grey card) -> profile + .ccm + residual%."""
+    image = _load(args.input) if args.input else _grab(args.camera)
+    try:
+        result = quick_calibrate(image, args.profile, rect=args.rect, camera_name=args.camera_name)
+    except (OSError, ValueError) as error:
+        raise SystemExit(str(error)) from error
+    print(f"quick: {result.mode} -> {result.profile}")
+    if result.residual_pct is not None:
+        print(f"fit residual: {result.residual_pct:.1f}% (warn above {RESIDUAL_WARN_PCT:.0f}%)")
+    if result.ev is not None:
+        print(f"grey card: ev={result.ev:+.2f}")
+    if result.warning:
+        print(f"warning: {result.warning}")
     return 0
 
 
@@ -159,8 +197,11 @@ def _parser() -> argparse.ArgumentParser:
         "--test-frame", action="store_true", help="apply the profile, save a preview"
     )
     modes.add_argument("--grey", action="store_true", help="18%% grey card -> EV offset")
+    modes.add_argument("--quick", action="store_true", help="one shot: chart -> CCM + residual%%")
     parser.add_argument("--input", help="source image (png/jpg)")
     parser.add_argument("--profile", help="CameraProfile JSON (templates in calibration/profiles/)")
+    parser.add_argument("--output", dest="profile", help="alias of --profile")
+    parser.add_argument("--camera-name", help="record the body name in the profile")
     parser.add_argument("--camera", type=int, default=0, help="cv2 camera index for --capture")
     parser.add_argument(
         "--rect", type=_rect, help="manual chart box X,Y,W,H when auto-detect fails"
@@ -178,6 +219,10 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.quick:
+        if not args.profile:
+            raise SystemExit("--quick needs --profile (or --output)")
+        return quick(args)
     if args.capture:
         return capture(args)
     if not args.input or not args.profile:

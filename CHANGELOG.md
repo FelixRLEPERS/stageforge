@@ -133,6 +133,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   degrades to `only 1 camera found, dual skipped` / `no cameras found`
   instead of a guess. Measurement only — per p02 the desync is
   measured, never corrected. Tests: `test_capture_diag_sync` (6).
+- **Quick one-shot calibration (`--quick`)**: new
+  `calibration/quick.py` (`quick_calibrate`) does in one call what
+  capture -> build -> grey took three: a ColorChecker in frame is
+  detected, fitted to a 3x3 CCM written beside the profile (with
+  `lut_path` updated), and the fit residual reported as a percentage
+  of the full sRGB scale — anything above `RESIDUAL_WARN_PCT` (5%) is
+  flagged as "chart not flat or clipped". With no chart it falls back
+  to the centre 18% grey card (EV trim only, with an explicit warning
+  that no matrix was fitted). `scripts/calibrate.py` gains `--quick`,
+  `--output` (alias of `--profile`), `--camera-name` and a
+  `_grab(camera, warmup=5)` helper so `--quick --camera 0` grabs the
+  frame itself after auto-exposure settles (now also used by
+  `--capture`). Tests: `test_calibration_quick` (6).
 
 ### Changed
 
