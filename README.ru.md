@@ -2,8 +2,8 @@
 
 **Автоматическая виртуальная студия с AR-композитингом в реальном времени.**
 
-[![CI](https://github.com/stageforge/stageforge/actions/workflows/ci.yml/badge.svg)](https://github.com/stageforge/stageforge/actions/workflows/ci.yml)
-[![Docs](https://github.com/stageforge/stageforge/actions/workflows/docs.yml/badge.svg)](https://github.com/stageforge/stageforge/actions/workflows/docs.yml)
+[![CI](https://github.com/FelixRLEPERS/stageforge/actions/workflows/ci.yml/badge.svg)](https://github.com/FelixRLEPERS/stageforge/actions/workflows/ci.yml)
+[![Docs](https://github.com/FelixRLEPERS/stageforge/actions/workflows/docs.yml/badge.svg)](https://github.com/FelixRLEPERS/stageforge/actions/workflows/docs.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 
@@ -61,7 +61,7 @@ godot --path godot
 ## Быстрый старт
 
 ```bash
-git clone https://github.com/stageforge/stageforge.git
+git clone https://github.com/FelixRLEPERS/stageforge.git
 cd stageforge
 ./scripts/bootstrap.sh      # или .\scripts\bootstrap.ps1 в Windows
 make test

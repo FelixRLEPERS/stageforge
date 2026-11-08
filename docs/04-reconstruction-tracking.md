@@ -113,4 +113,4 @@ outside it is logged as a sync warning.
 
 MVP implementation lives in `src/stageforge/`; the original hypothesis
 is kept as documentation in
-[`prototypes/p01-depth-mvp`](https://github.com/stageforge/stageforge/blob/main/prototypes/p01-depth-mvp/README.md).
+[`prototypes/p01-depth-mvp`](https://github.com/FelixRLEPERS/stageforge/blob/main/prototypes/p01-depth-mvp/README.md).

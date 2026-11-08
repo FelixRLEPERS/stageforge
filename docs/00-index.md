@@ -24,9 +24,9 @@ repository. Read `00-index.md` first, then `02-architecture.md`.
 
 - [Architecture Decision Records](adr/README.md) — why a decision was
   taken, not just what was decided.
-- [`CHANGELOG.md`](https://github.com/stageforge/stageforge/blob/main/CHANGELOG.md) — what changed between versions.
-- [`CONTRIBUTING.md`](https://github.com/stageforge/stageforge/blob/main/CONTRIBUTING.md) — workflow and commit rules.
-- [`prototypes`](https://github.com/stageforge/stageforge/blob/main/prototypes) — throwaway MVP experiments that
+- [`CHANGELOG.md`](https://github.com/FelixRLEPERS/stageforge/blob/main/CHANGELOG.md) — what changed between versions.
+- [`CONTRIBUTING.md`](https://github.com/FelixRLEPERS/stageforge/blob/main/CONTRIBUTING.md) — workflow and commit rules.
+- [`prototypes`](https://github.com/FelixRLEPERS/stageforge/blob/main/prototypes) — throwaway MVP experiments that
   de-risk the roadmap.
 
 ## Conventions used in these docs
@@ -45,4 +45,4 @@ repository. Read `00-index.md` first, then `02-architecture.md`.
 | A broadcast engineer | 03, 07, 08, `infra/hardware/mvp-bom.md` |
 | A developer | 01, 02, 09, 10 |
 | A product / editorial person | 06, 11 |
-| A security researcher | [`SECURITY.md`](https://github.com/stageforge/stageforge/blob/main/SECURITY.md) |
+| A security researcher | [`SECURITY.md`](https://github.com/FelixRLEPERS/stageforge/blob/main/SECURITY.md) |

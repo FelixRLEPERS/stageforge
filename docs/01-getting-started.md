@@ -9,12 +9,12 @@ StageForge installation.
 - `git`
 - `make` (optional, Windows users can call the tools directly)
 - For real hardware work: an NDI-enabled network and/or a Blackmagic
-  DeckLink card — see [`infra/hardware/mvp-bom.md`](https://github.com/stageforge/stageforge/blob/main/infra/hardware/mvp-bom.md)
+  DeckLink card — see [`infra/hardware/mvp-bom.md`](https://github.com/FelixRLEPERS/stageforge/blob/main/infra/hardware/mvp-bom.md)
 
 ## 1. Clone and bootstrap
 
 ```bash
-git clone https://github.com/stageforge/stageforge.git
+git clone https://github.com/FelixRLEPERS/stageforge.git
 cd stageforge
 ```
 
@@ -80,5 +80,5 @@ Output lands in `site/`.
 ## Next steps
 
 - Understand the data flow: [02-architecture.md](02-architecture.md)
-- Try a prototype: [`prototypes`](https://github.com/stageforge/stageforge/blob/main/prototypes)
+- Try a prototype: [`prototypes`](https://github.com/FelixRLEPERS/stageforge/blob/main/prototypes)
 - Read the roadmap: [11-roadmap.md](11-roadmap.md)

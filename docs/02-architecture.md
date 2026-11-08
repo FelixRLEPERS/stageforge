@@ -65,7 +65,7 @@ Interface: `output.OutputSink`.
 2. **Everything is a stub until proven otherwise** — no premature
    optimisation in the scaffold.
 3. **Latency budget is explicit** — the end-to-end target is ≤ 4 frames
-   (see [`prototypes/p02-keyfill-mvp`](https://github.com/stageforge/stageforge/blob/main/prototypes/p02-keyfill-mvp/README.md)).
+   (see [`prototypes/p02-keyfill-mvp`](https://github.com/FelixRLEPERS/stageforge/blob/main/prototypes/p02-keyfill-mvp/README.md)).
 4. **Decisions are recorded as ADRs** — see
    [adr/README.md](adr/README.md).
 

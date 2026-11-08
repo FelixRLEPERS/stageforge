@@ -442,5 +442,5 @@ Facts (each measured, not assumed):
 - The CI line-ending check only fails on `crlf`/`mixed` index states so
   that intentionally binary files are not flagged.
 
-[Unreleased]: https://github.com/stageforge/stageforge/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/stageforge/stageforge/releases/tag/v0.1.0
+[Unreleased]: https://github.com/FelixRLEPERS/stageforge/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/FelixRLEPERS/stageforge/releases/tag/v0.1.0

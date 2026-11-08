@@ -66,10 +66,10 @@ reconstruction = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/stageforge/stageforge"
-Documentation = "https://github.com/stageforge/stageforge/blob/main/docs/00-index.md"
-Changelog = "https://github.com/stageforge/stageforge/blob/main/CHANGELOG.md"
-Issues = "https://github.com/stageforge/stageforge/issues"
+Homepage = "https://github.com/FelixRLEPERS/stageforge"
+Documentation = "https://github.com/FelixRLEPERS/stageforge/blob/main/docs/00-index.md"
+Changelog = "https://github.com/FelixRLEPERS/stageforge/blob/main/CHANGELOG.md"
+Issues = "https://github.com/FelixRLEPERS/stageforge/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

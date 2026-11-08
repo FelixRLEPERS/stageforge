@@ -20,9 +20,9 @@ Lantern)** into two USB FHD capture cards, monocular depth, no SDI.
 
 | ID | Milestone | Success criterion | Status |
 |----|-----------|-------------------|--------|
-| P01 | [Depth MVP](https://github.com/stageforge/stageforge/blob/main/prototypes/p01-depth-mvp/README.md) | depth map + alpha at ≥ 25 fps | ◐ implementation landed in `src/stageforge/` |
-| P02 | [Key/Fill MVP](https://github.com/stageforge/stageforge/blob/main/prototypes/p02-keyfill-mvp/README.md) | end-to-end latency ≤ 4 frames | ◐ measured via `avg_latency_ms` in the run report |
-| P03 | [Story-Link MVP](https://github.com/stageforge/stageforge/blob/main/prototypes/p03-story-link-mvp/README.md) | cue → object mapping from YAML | ✔ `YamlStoryLink` resolves `configs/storylink.yaml` |
+| P01 | [Depth MVP](https://github.com/FelixRLEPERS/stageforge/blob/main/prototypes/p01-depth-mvp/README.md) | depth map + alpha at ≥ 25 fps | ◐ implementation landed in `src/stageforge/` |
+| P02 | [Key/Fill MVP](https://github.com/FelixRLEPERS/stageforge/blob/main/prototypes/p02-keyfill-mvp/README.md) | end-to-end latency ≤ 4 frames | ◐ measured via `avg_latency_ms` in the run report |
+| P03 | [Story-Link MVP](https://github.com/FelixRLEPERS/stageforge/blob/main/prototypes/p03-story-link-mvp/README.md) | cue → object mapping from YAML | ✔ `YamlStoryLink` resolves `configs/storylink.yaml` |
 
 - [x] `UsbCameraSource` over UVC with pillarbox autocrop
 - [x] `MultiCameraSource` frame-id alignment + desync counter

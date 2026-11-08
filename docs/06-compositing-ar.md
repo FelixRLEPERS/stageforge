@@ -54,15 +54,15 @@ plate arrives.
 ## Status
 
 `Compositor` and `StoryLink` are stubs. Prototype
-[`prototypes/p03-story-link-mvp`](https://github.com/stageforge/stageforge/blob/main/prototypes/p03-story-link-mvp/README.md)
+[`prototypes/p03-story-link-mvp`](https://github.com/FelixRLEPERS/stageforge/blob/main/prototypes/p03-story-link-mvp/README.md)
 proves the cue→asset mapping independently of the render layer.
 
 ## Python → Godot: RGBA stream
 
 The bridge between this pipeline and the Godot renderer (ADR-0004) is
 one frame slot on disk, written by
-[`GodotOutputSink`](../src/stageforge/output/godot_sink.py) and
-consumed by [`godot/receiver.gd`](../godot/receiver.gd):
+[`GodotOutputSink`](https://github.com/FelixRLEPERS/stageforge/blob/main/src/stageforge/output/godot_sink.py) and
+consumed by [`godot/receiver.gd`](https://github.com/FelixRLEPERS/stageforge/blob/main/godot/receiver.gd):
 
 ```
 L4 Compositor ── Fill (BGR) + AlphaMask ──► GodotOutputSink

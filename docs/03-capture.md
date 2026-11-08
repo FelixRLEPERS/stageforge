@@ -76,7 +76,7 @@ EV + CCM to every frame *before* depth estimation, so Depth Anything
 V2 and the segmenter always see corrected colour.
 
 The one-time studio procedure (~30 minutes) lives in
-[`calibration/README.md`](../calibration/README.md) — frame a chart,
+[`calibration/README.md`](https://github.com/FelixRLEPERS/stageforge/blob/main/calibration/README.md) — frame a chart,
 `--capture`, `--build`, `--test-frame`, then flip `enabled: true`.
 
 MVP limits: the 5D Mark II is 8-bit sRGB (no log), so a linear matrix
