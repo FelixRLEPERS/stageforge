@@ -1,7 +1,7 @@
 # Development configuration — two groups of keys:
 #   MVP (read by src/stageforge/orchestrator/builder.py):
 #     mode, camera, reconstruction, segmentation, compositing,
-#     output.mode/out_dir/ndi_name, storylink
+#     output.mode/out_dir/ndi_name, storylink, debug
 #   Scaffold (abstract layer contracts, kept for reference):
 #     cameras, depth, tracker, segmenter, compositor, logging,
 #     plus the output.* sub-keys (sink/device/scan_mode/key_level)
@@ -74,6 +74,13 @@ output:
 storylink:
   rules: "configs/storylink.yaml"
   strict: false
+
+# Diagnostics (optional; also: CLI flag --record-raw)
+debug:
+  record_raw: false           # true: save every Nth pre-crop frame + manifest.json
+  raw_dir: "out/raw_frames"
+  raw_format: "png"              # png | jpg
+  raw_every_n: 30              # save 1 frame in N (30 = 1 fps at 30 fps)
 
 logging:
   level: debug

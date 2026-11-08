@@ -19,6 +19,7 @@ import numpy.typing as npt
 
 from stageforge.capture.base import CaptureSource, SourceUnavailableError
 from stageforge.capture.crop import Rect, apply_crop, crop_to_aspect, detect_bars
+from stageforge.capture.record import RawFrameRecorder
 from stageforge.core.log import logger
 from stageforge.core.types import Frame
 
@@ -49,6 +50,10 @@ class UsbCameraSource(CaptureSource):
         target_aspect: float | None = 16 / 9,
         name: str = "",
         max_frames: int | None = None,
+        record_raw: bool = False,
+        raw_dir: str = "out/raw_frames",
+        raw_format: str = "png",
+        raw_every_n: int = 30,
     ) -> None:
         self._index = index
         self._width = width
@@ -65,6 +70,17 @@ class UsbCameraSource(CaptureSource):
         self._frame_id = 0
         self._detected_once: bool = False
         self._since_detect: int = 0
+        # Diagnostics only (debug.record_raw): pre-crop frames + manifest.
+        self._recorder: RawFrameRecorder | None = None
+        if record_raw:
+            self._recorder = RawFrameRecorder(
+                index=index,
+                name=self._name,
+                out_dir=raw_dir,
+                fmt=raw_format,
+                every_n=raw_every_n,
+                fps_reported=float(fps),
+            )
 
     @property
     def crop_rect(self) -> Rect | None:
@@ -110,8 +126,11 @@ class UsbCameraSource(CaptureSource):
 
         self._frame_id += 1
         image = self._autocropped(raw)
+        timestamp_us = int(time.monotonic() * 1_000_000)
+        if self._recorder is not None:
+            self._recorder.record(self._frame_id, timestamp_us, raw)
         return Frame(
-            timestamp_us=int(time.monotonic() * 1_000_000),
+            timestamp_us=timestamp_us,
             camera_id=self._name,
             width=int(image.shape[1]),
             height=int(image.shape[0]),
@@ -128,6 +147,8 @@ class UsbCameraSource(CaptureSource):
 
     def close(self) -> None:
         """Release the device. Safe to call twice."""
+        if self._recorder is not None:
+            self._recorder.close()
         if self._cap is not None:
             self._cap.release()
             self._cap = None

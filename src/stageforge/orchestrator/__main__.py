@@ -60,6 +60,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="force mode=synthetic: no camera, no torch, safe everywhere",
     )
+    parser.add_argument(
+        "--record-raw",
+        action="store_true",
+        help="save every Nth raw camera frame to debug.raw_dir (offline debugging)",
+    )
     args = parser.parse_args(argv)
 
     _configure_streams()
@@ -72,6 +77,11 @@ def main(argv: list[str] | None = None) -> int:
     if not config:
         print(_MESSAGE, file=sys.stderr)
         return 1
+
+    if args.record_raw:
+        debug = config.get("debug")
+        debug = dict(debug) if isinstance(debug, dict) else {}
+        config["debug"] = {**debug, "record_raw": True}
 
     pipeline = StageForgePipeline(config, dry_run=args.dry_run)
     try:

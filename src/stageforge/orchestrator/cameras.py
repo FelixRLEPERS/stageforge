@@ -22,11 +22,17 @@ __all__ = ["aspect", "build_capture", "mapping"]
 def build_capture(
     mode: str,
     camera_cfg: Mapping[str, Any],
+    debug_cfg: Mapping[str, Any] | None = None,
 ) -> tuple[CaptureSource, MultiCameraSource | None]:
-    """Build one source per configured camera, wrapped when there are two."""
+    """Build one source per configured camera, wrapped when there are two.
+
+    ``debug_cfg`` is the optional ``debug`` section (record_raw, raw_dir,
+    raw_format, raw_every_n); absent or empty means no recording at all.
+    """
     width = int(camera_cfg.get("width", 1920))
     height = int(camera_cfg.get("height", 1080))
     fps = int(camera_cfg.get("fps", 30))
+    debug = debug_cfg if debug_cfg is not None else {}
     entries = [item for item in camera_cfg.get("cameras", []) if isinstance(item, dict)]
     count = max(1, int(camera_cfg.get("num_cameras", len(entries) or 1)))
     count = min(count, max(1, len(entries))) if entries else count
@@ -35,9 +41,9 @@ def build_capture(
     for index in range(count):
         entry: Mapping[str, Any] = entries[index] if index < len(entries) else {}
         if mode == "synthetic":
-            sources.append(_synthetic_source(index, entry, width, height, camera_cfg))
+            sources.append(_synthetic_source(index, entry, width, height, camera_cfg, debug=debug))
         else:
-            sources.append(_usb_source(index, entry, width, height, fps))
+            sources.append(_usb_source(index, entry, width, height, fps, debug=debug))
 
     if len(sources) == 1:
         return sources[0], None
@@ -64,12 +70,25 @@ def aspect(value: Any, default: float | None) -> float | None:
     return default
 
 
+def _record_flags(debug: Mapping[str, Any]) -> dict[str, Any]:
+    """Translate the debug section into RawFrameRecorder keyword arguments."""
+    if not bool(debug.get("record_raw", False)):
+        return {"record_raw": False}
+    return {
+        "record_raw": True,
+        "raw_dir": str(debug.get("raw_dir", "out/raw_frames")),
+        "raw_format": str(debug.get("raw_format", "png")),
+        "raw_every_n": int(debug.get("raw_every_n", 30)),
+    }
+
+
 def _usb_source(
     index: int,
     entry: Mapping[str, Any],
     width: int,
     height: int,
     fps: int,
+    debug: Mapping[str, Any] | None = None,
 ) -> UsbCameraSource:
     """One UVC device with its autocrop policy."""
     autocrop = mapping(entry, "autocrop")
@@ -83,6 +102,7 @@ def _usb_source(
         autocrop_refresh=int(autocrop.get("refresh_interval", 300)),
         target_aspect=aspect(autocrop.get("target_aspect"), 16 / 9),
         name=str(entry.get("name", f"cam{index}")),
+        **_record_flags(debug if debug is not None else {}),
     )
 
 
@@ -92,6 +112,7 @@ def _synthetic_source(
     width: int,
     height: int,
     camera_cfg: Mapping[str, Any],
+    debug: Mapping[str, Any] | None = None,
 ) -> SyntheticCameraSource:
     """Generated stand-in that still exercises the autocrop path."""
     autocrop = mapping(entry, "autocrop")
@@ -106,4 +127,5 @@ def _synthetic_source(
         autocrop_refresh=int(autocrop.get("refresh_interval", 300)),
         target_aspect=aspect(autocrop.get("target_aspect"), 16 / 9),
         name=str(entry.get("name", f"synthetic{index}")),
+        **_record_flags(debug if debug is not None else {}),
     )

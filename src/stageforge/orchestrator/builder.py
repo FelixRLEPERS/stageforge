@@ -106,7 +106,7 @@ def build_chain(config: Mapping[str, Any], dry_run: bool = False) -> Chain:
     if mode not in MODES:
         raise ValueError(f"unknown mode {mode!r}, expected one of {MODES}")
 
-    capture, multi = build_capture(mode, mapping(config, "camera"))
+    capture, multi = build_capture(mode, mapping(config, "camera"), mapping(config, "debug"))
     segmenter_cfg = mapping(mapping(config, "segmentation"), "depth_alpha")
     compositor_cfg = mapping(config, "compositing")
     shade = compositor_cfg.get("background_shade")

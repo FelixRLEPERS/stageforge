@@ -98,6 +98,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Node3D` loader that instantiates the mesh and spawns `Marker3D`/`Camera3D`
   per camera. New `reconstruction` extra (`trimesh` only — no `scipy`,
   no `pygltflib`); tests `test_import_reconstruction` (4).
+- **Raw-frame recording for offline debugging**: new `debug` config
+  section (`record_raw`, `raw_dir`, `raw_format`, `raw_every_n`) plus a
+  `--record-raw` CLI flag — every Nth *pre-crop* frame is written to
+  `out/raw_frames/cam{index}_frame{ID}.{png|jpg}` next to a merged
+  `manifest.json` (per camera `name`/`fps_reported`/`fps_actual`, per
+  frame `timestamp_us`/`frame_id`/`resolution`/`file`). Implemented in
+  the new `capture/record.py` (`RawFrameRecorder`), wired through
+  `build_capture(..., debug_cfg)` into both `UsbCameraSource` and
+  `SyntheticCameraSource`; off by default, best-effort writes that never
+  stop the pipeline. Tests: `test_capture_record_raw` (5).
 
 ### Changed
 

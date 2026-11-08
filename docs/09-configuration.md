@@ -80,7 +80,22 @@ output:
 storylink:
   rules: "configs/storylink.yaml"
   strict: false                # true: unmatched cues raise CueMatchError
+
+debug:                          # diagnostics, optional
+  record_raw: false             # true: save every Nth pre-crop frame + manifest.json
+  raw_dir: "out/raw_frames"     # where cam{index}_frame{ID}.{png|jpg} land (gitignored)
+  raw_format: "png"             # png | jpg
+  raw_every_n: 30               # save 1 frame in N (30 ≈ 1 fps at 30 fps)
 ```
+
+The `debug` section is diagnostics only — with `record_raw: false`
+(or no section at all) nothing changes. When enabled (or forced with
+the `--record-raw` CLI flag) every `raw_every_n`-th frame is written
+*before* autocrop to `raw_dir` as `cam{index}_frame{ID}.{ext}`, and a
+merged `manifest.json` records per camera its `name`, `fps_reported`
+(config), `fps_actual` (measured) and per frame `timestamp_us`,
+`frame_id`, `resolution` and `file`. Writes are best effort: a failed
+save logs a warning and never stops the pipeline.
 
 ### Scaffold keys (layer contracts, not read by the MVP pipeline)
 
@@ -139,6 +154,8 @@ MVP keys (raised by `builder.py`, before any device is opened):
 - `camera.synthetic.pattern` must be `plain`, `bars` or `pillarbox`.
 - `camera.autocrop.target_aspect` accepts `"W:H"`, a float or `null`;
   an unparsable value logs a warning and falls back to the default.
+- `debug.raw_format` must be `png`, `jpg` or `jpeg` (raised when
+  `record_raw: true`, before any device is opened).
 
 Scaffold keys:
 
@@ -168,6 +185,9 @@ python -m stageforge.orchestrator --config configs/dev.yaml --frames 300
 
 # No hardware, no torch, safe anywhere — forces mode=synthetic
 python -m stageforge.orchestrator --config configs/dev.yaml --dry-run --frames 3
+
+# Diagnostics: also save every Nth raw frame to out/raw_frames/
+python -m stageforge.orchestrator --config configs/dev.yaml --dry-run --frames 60 --record-raw
 
 # Bare invocation reports the scaffold status and exits 1
 python -m stageforge.orchestrator
