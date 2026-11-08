@@ -47,12 +47,8 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Export a .blend to .glb for the StageForge Godot layer."
     )
-    parser.add_argument(
-        "--input", type=Path, default=None, help=".blend to open before exporting"
-    )
-    parser.add_argument(
-        "--output", type=Path, required=True, help="destination .glb path"
-    )
+    parser.add_argument("--input", type=Path, default=None, help=".blend to open before exporting")
+    parser.add_argument("--output", type=Path, required=True, help="destination .glb path")
     return parser.parse_args(argv)
 
 
@@ -73,13 +69,13 @@ def main() -> int:
 
     result = bpy.ops.export_scene.gltf(
         filepath=str(out),
-        export_format="GLB",           # glTF 2.0 binary, textures embedded
-        export_apply=True,             # apply modifiers — Godot sees final mesh
-        export_materials="EXPORT",     # keep Principled BSDF materials
-        export_image_format="AUTO",    # PNG when alpha is present, else JPEG
-        export_yup=True,               # glTF convention; Godot importer undoes it
-        export_cameras=False,          # the Godot scene owns the camera
-        export_lights=False,           # …and the lighting
+        export_format="GLB",  # glTF 2.0 binary, textures embedded
+        export_apply=True,  # apply modifiers — Godot sees final mesh
+        export_materials="EXPORT",  # keep Principled BSDF materials
+        export_image_format="AUTO",  # PNG when alpha is present, else JPEG
+        export_yup=True,  # glTF convention; Godot importer undoes it
+        export_cameras=False,  # the Godot scene owns the camera
+        export_lights=False,  # …and the lighting
         export_animations=True,
     )
     if "FINISHED" not in result:
