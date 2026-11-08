@@ -1,4 +1,4 @@
-"""Camera diagnostics CLI: candidate modes, real fps, drops, live/frozen.
+"""Camera diagnostics CLI: modes, real fps, drops, live/frozen, dual skew.
 
 Read-only sweep over capture indices 0..3. Per index it first probes
 the candidate mode table from :mod:`stageforge.capture.diag` (one
@@ -9,11 +9,17 @@ pipeline's own request (1920x1080, fps 30, MJPG — the same request
 *measured* frame rate, stalls, the live/frozen verdict, an identity
 hint for the two rig bodies and a sample PNG under ``out/diag/``.
 
+``--dual`` swaps the sweep for :mod:`stageforge.capture.diag_sync`:
+both cameras read at once on their own threads for 30 s, printing
+per-camera cadence and the max nearest-arrival skew between them —
+the desync is *measured*, never corrected here (p02).
+
 Usage::
 
     python scripts/diagnose_camera.py
     python scripts/diagnose_camera.py --seconds 10
     python scripts/diagnose_camera.py --stress     # 30 s window
+    python scripts/diagnose_camera.py --dual       # 30 s skew test
 """
 
 from __future__ import annotations
@@ -22,6 +28,7 @@ import argparse
 import sys
 
 from stageforge.capture.diag import StreamStats, measure, probe_modes
+from stageforge.capture.diag_sync import dual_measure
 
 INDICES = range(4)
 DEFAULT_SECONDS = 5.0
@@ -85,25 +92,59 @@ def _print_table(rows: list[StreamStats]) -> None:
         )
 
 
+def _run_dual(seconds: float) -> int:
+    """The two-camera skew test; exact strings are the test-day contract."""
+    print(f"[dual] reading cam0+cam1 for {seconds:.0f} s ...")
+    opened, stats = dual_measure(seconds)
+    if opened == 0:
+        print("no cameras found")
+        return 1
+    if stats is None:  # one camera silent — nothing to compare against
+        print("only 1 camera found, dual skipped")
+        return 1
+    for cam in stats.cams:
+        print(
+            f"{cam.label}: {cam.frames} frames, "
+            f"avg interval {cam.avg_interval_ms:.1f} ms, drops {cam.drops}"
+        )
+    print(f"max skew: {stats.max_skew_ms:.1f} ms")
+    print("recommendation: genlock unavailable, use software sync")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="StageForge camera diagnostics (read-only).")
     parser.add_argument(
         "--seconds",
         type=float,
-        default=DEFAULT_SECONDS,
-        help="streaming window per camera in seconds (default: 5)",
+        default=None,
+        help="streaming window per camera in seconds (default: 5, 30 with --stress/--dual)",
     )
     parser.add_argument(
         "--stress",
         action="store_true",
         help=f"use a {STRESS_SECONDS:.0f} s window instead of --seconds",
     )
+    parser.add_argument(
+        "--dual",
+        action="store_true",
+        help="read both cameras at once and report max arrival skew (default 30 s)",
+    )
     args = parser.parse_args(argv)
     _configure_stdout()
 
-    seconds = STRESS_SECONDS if args.stress else args.seconds
+    if args.seconds is not None:
+        seconds = args.seconds
+    elif args.stress or args.dual:
+        seconds = STRESS_SECONDS
+    else:
+        seconds = DEFAULT_SECONDS
+    if args.dual:
+        return _run_dual(seconds)
+
     rows: list[StreamStats] = []
     for index in INDICES:
+        print(f"[{index}] probing ...")
         stats = measure(index, seconds)
         if stats is None:
             print(f"[{index}] not opened (no device / refused)")

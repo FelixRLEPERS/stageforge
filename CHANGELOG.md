@@ -121,6 +121,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mode table, stream report and a closing summary. Read-only: the
   pipeline request is unchanged and the capture layer is untouched.
   Tests: `test_capture_diag` (12).
+- **Dual-camera sync diagnostic (`--dual`)**: new `capture/diag_sync.py`
+  reads both capture indices concurrently, each on its own thread (a
+  single thread would serialise the two blocking `read()` calls and
+  destroy the skew being measured), stamps every frame's arrival with
+  `time.monotonic()` and matches stamps across cameras with a
+  nearest-neighbour search run in both directions. `--dual` prints
+  `cam0: N frames, avg interval X ms, drops N`, `max skew: N ms` and
+  `recommendation: genlock unavailable, use software sync` (default
+  30 s window, `--seconds` overrides); a missing or silent camera
+  degrades to `only 1 camera found, dual skipped` / `no cameras found`
+  instead of a guess. Measurement only — per p02 the desync is
+  measured, never corrected. Tests: `test_capture_diag_sync` (6).
 
 ### Changed
 
