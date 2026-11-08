@@ -108,6 +108,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `build_capture(..., debug_cfg)` into both `UsbCameraSource` and
   `SyntheticCameraSource`; off by default, best-effort writes that never
   stop the pipeline. Tests: `test_capture_record_raw` (5).
+- **Extended camera diagnostics for test day**: new `capture/diag.py`
+  with `probe_modes()` (candidate-mode table: negotiated geometry +
+  read latency per mode, where an unsupported mode blocking for seconds
+  *is* the finding), `measure()` (streaming window with **measured**
+  fps, drop counting vs the stream's own cadence, Canny-based
+  live/frozen verdict, sample PNG in `out/diag/`, rig identity
+  heuristic) and `identify()` (`5D II detected (pillarbox …)` /
+  `5D IV detected (clean 1920×1080)` / black-frame guard).
+  `scripts/diagnose_camera.py` rewritten as a thin CLI over it
+  (`--seconds`, `--stress` for a 30 s window) printing a per-camera
+  mode table, stream report and a closing summary. Read-only: the
+  pipeline request is unchanged and the capture layer is untouched.
+  Tests: `test_capture_diag` (12).
 
 ### Changed
 

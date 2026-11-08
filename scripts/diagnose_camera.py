@@ -1,146 +1,124 @@
-"""One-shot camera diagnostics for the 1 fps capture question.
+"""Camera diagnostics CLI: candidate modes, real fps, drops, live/frozen.
 
-Read-only: enumerates capture indices 0..3 with the same request the
-pipeline makes (1920x1080, fps 30, MJPG — ``capture/source.py:87-92``),
-times 10 real ``cap.read()`` calls, saves the first good frame to
-``out/diag_cam_{i}.png`` for visual inspection and measures the
-first-vs-last frame difference (live signal vs frozen picture). USB bus
-speed is not readable from OpenCV — check Device Manager / USBView.
+Read-only sweep over capture indices 0..3. Per index it first probes
+the candidate mode table from :mod:`stageforge.capture.diag` (one
+frame read per mode — an unsupported mode may block for seconds, which
+is exactly the information being collected), then streams the
+pipeline's own request (1920x1080, fps 30, MJPG — the same request
+``capture/source.py`` makes) for a few seconds and reports the
+*measured* frame rate, stalls, the live/frozen verdict, an identity
+hint for the two rig bodies and a sample PNG under ``out/diag/``.
 
 Usage::
 
     python scripts/diagnose_camera.py
+    python scripts/diagnose_camera.py --seconds 10
+    python scripts/diagnose_camera.py --stress     # 30 s window
 """
 
 from __future__ import annotations
 
+import argparse
 import sys
-from pathlib import Path
-from time import perf_counter
 
-import cv2
-import numpy as np
+from stageforge.capture.diag import StreamStats, measure, probe_modes
 
 INDICES = range(4)
-SAMPLES = 10
-WIDTH = 1920
-HEIGHT = 1080
-FPS = 30.0
+DEFAULT_SECONDS = 5.0
+STRESS_SECONDS = 30.0
 
 
-def _fourcc(value: float) -> str:
-    code = int(value)
-    raw = bytes((code >> (8 * i)) & 0xFF for i in range(4))
-    return "".join(chr(b) if 32 <= b < 127 else f"\\x{b:02x}" for b in raw)
+def _configure_stdout() -> None:
+    """Make stdout tolerant of non-ASCII verdicts on any console."""
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if reconfigure is not None:
+        reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 
-def _props(cap: cv2.VideoCapture) -> tuple[int, int, float, str]:
-    return (
-        int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
-        int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-        float(cap.get(cv2.CAP_PROP_FPS)),
-        _fourcc(cap.get(cv2.CAP_PROP_FOURCC)),
+def _print_modes(index: int) -> None:
+    """One line per candidate mode: what the device negotiated."""
+    for probe in probe_modes(index):
+        if probe.read_ok:
+            width, height, fps, fourcc = probe.negotiated
+            print(
+                f"    mode    : {probe.label:<28} -> {width}x{height} "
+                f"fps={fps:.2f} fourcc={fourcc} ({probe.read_ms:.0f} ms)"
+            )
+        else:
+            print(
+                f"    mode    : {probe.label:<28} -> FAIL: {probe.error} ({probe.read_ms:.0f} ms)"
+            )
+
+
+def _print_stream(stats: StreamStats) -> None:
+    """The behaviour of the pipeline's own request on this device."""
+    width, height, fps, fourcc = stats.negotiated
+    print(
+        f"    request : {width}x{height} fps={fps:.2f} fourcc={fourcc}  (pipeline parity, source.py)"
     )
+    print(
+        f"    stream  : {stats.seconds:.1f} s, {stats.frames} frames, "
+        f"{stats.measured_fps:.2f} fps, {stats.failed} failed reads"
+    )
+    print(f"    stalls  : {stats.drops} beyond 1.5x the median interval")
+    if stats.raw_diff is None or stats.edge_diff is None:
+        print("    live    : n/a (needs 2+ frames in the window)")
+    else:
+        state = "n/a" if stats.frozen is None else ("FROZEN/static" if stats.frozen else "LIVE")
+        print(f"    live    : raw={stats.raw_diff:.2f} canny={stats.edge_diff:.3f} -> {state}")
+    print(f"    frame   : {stats.resolution or 'none'} -> {stats.sample or 'none'}")
+    print(f"    ident   : {stats.verdict}")
+    print("    usb     : not readable from OpenCV; check Device Manager -> USBView")
 
 
-def diagnose(index: int) -> dict[str, object] | None:
-    """Return measurements for *index*; None when the index does not open."""
-    cap = cv2.VideoCapture(index)
-    if not cap.isOpened():
-        cap.release()
-        return None
-    default = _props(cap)
-    # same request as capture/source.py build_capture()
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, float(WIDTH))
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, float(HEIGHT))
-    cap.set(cv2.CAP_PROP_FPS, FPS)
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*"MJPG"))
-    negotiated = _props(cap)
-    timings: list[float] = []
-    first: np.ndarray | None = None
-    last: np.ndarray | None = None
-    ok_count = 0
-    for _ in range(SAMPLES):
-        start = perf_counter()
-        ok, img = cap.read()
-        timings.append((perf_counter() - start) * 1000.0)
-        if not ok:
-            break
-        ok_count += 1
-        if first is None:
-            first = img
-        last = img
-    cap.release()
-    avg_ms = sum(timings) / len(timings)
-    png: str | None = None
-    if first is not None:
-        Path("out").mkdir(exist_ok=True)
-        png = f"out/diag_cam_{index}.png"
-        cv2.imwrite(png, first)
-    diff: float | None = None
-    if first is not None and last is not None and ok_count > 1:
-        diff = float(np.mean(np.abs(first.astype(np.int16) - last.astype(np.int16))))
-    return {
-        "default": default,
-        "negotiated": negotiated,
-        "ok": ok_count,
-        "avg_ms": avg_ms,
-        "min_ms": min(timings),
-        "max_ms": max(timings),
-        "diff": diff,
-        "shape": None if first is None else tuple(first.shape),
-        "png": png,
-    }
+def _print_table(rows: list[StreamStats]) -> None:
+    print()
+    print(f"{'idx':>3}  {'WxH':<10} {'real_fps':>8} {'drops':>5} {'frozen':>6}  identify")
+    for stats in rows:
+        frozen = "n/a" if stats.frozen is None else ("yes" if stats.frozen else "no")
+        resolution = (
+            "-" if stats.resolution is None else f"{stats.resolution[0]}x{stats.resolution[1]}"
+        )
+        print(
+            f"{stats.index:>3}  {resolution:<10} {stats.measured_fps:>8.2f} "
+            f"{stats.drops:>5} {frozen:>6}  {stats.verdict}"
+        )
 
 
-def main() -> None:
-    sys.stdout.reconfigure(line_buffering=True)
-    rows: list[tuple[int, tuple[int, int, float, str], dict[str, object]]] = []
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="StageForge camera diagnostics (read-only).")
+    parser.add_argument(
+        "--seconds",
+        type=float,
+        default=DEFAULT_SECONDS,
+        help="streaming window per camera in seconds (default: 5)",
+    )
+    parser.add_argument(
+        "--stress",
+        action="store_true",
+        help=f"use a {STRESS_SECONDS:.0f} s window instead of --seconds",
+    )
+    args = parser.parse_args(argv)
+    _configure_stdout()
+
+    seconds = STRESS_SECONDS if args.stress else args.seconds
+    rows: list[StreamStats] = []
     for index in INDICES:
-        result = diagnose(index)
-        if result is None:
+        stats = measure(index, seconds)
+        if stats is None:
             print(f"[{index}] not opened (no device / refused)")
             continue
-        default = result["default"]
-        negotiated = result["negotiated"]
-        assert isinstance(default, tuple) and isinstance(negotiated, tuple)
-        diff = result["diff"]
-        verdict = "n/a (single read)"
-        if isinstance(diff, float):
-            verdict = f"{diff:.2f} {'-> LIVE' if diff >= 0.5 else '-> FROZEN/static'}"
         print(f"[{index}] opened")
-        print(f"    default : {default[0]}x{default[1]} fps={default[2]:.2f} fourcc={default[3]!r}")
-        print(
-            f"    request : {negotiated[0]}x{negotiated[1]} fps={negotiated[2]:.2f} "
-            f"fourcc={negotiated[3]!r}  (pipeline parity, source.py)"
-        )
-        print(
-            f"    reads   : {result['ok']}/{SAMPLES} ok, "
-            f"avg {result['avg_ms']:.1f} ms (min {result['min_ms']:.1f} / "
-            f"max {result['max_ms']:.1f}) -> {1000.0 / float(result['avg_ms']):.2f} fps"
-        )
-        print(f"    frame   : {result['shape']} -> {result['png']}")
-        print(f"    diff    : first vs last frame: {verdict}")
-        print("    usb     : not readable from OpenCV; check Device Manager -> USBView")
-        rows.append((index, negotiated, result))
+        _print_modes(index)
+        _print_stream(stats)
+        rows.append(stats)
 
     if not rows:
-        print("no capture device opened")
-        return
-    print()
-    print(
-        f"{'idx':>3}  {'opened':<6} {'WxH':<10} {'reported_fps':>12} "
-        f"{'real_fps':>8} {'fourcc':>6} {'avg_ms':>8} {'min_ms':>8} {'max_ms':>8}"
-    )
-    for index, negotiated, result in rows:
-        avg_ms = float(result["avg_ms"])
-        print(
-            f"{index:>3}  {'yes':<6} {negotiated[0]}x{negotiated[1]:<6} "
-            f"{negotiated[2]:>12.2f} {1000.0 / avg_ms:>8.2f} {negotiated[3]:>6} "
-            f"{avg_ms:>8.1f} {float(result['min_ms']):>8.1f} "
-            f"{float(result['max_ms']):>8.1f}"
-        )
+        print("no cameras found")
+        return 1
+    _print_table(rows)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
