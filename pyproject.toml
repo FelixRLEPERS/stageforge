@@ -32,6 +32,10 @@ dev = [
   "pytest",
   "ruff",
   "mypy",
+  # PyYAML ships no py.typed; without these stubs `mypy --strict` fails on
+  # `import yaml` in a fresh environment (it passed only on machines that
+  # happened to have types-PyYAML installed globally).
+  "types-PyYAML",
   "pre-commit",
   "mkdocs",
 ]
@@ -118,6 +122,19 @@ module = [
   "onnxruntime.*",
 ]
 ignore_missing_imports = true
+
+# `AutoImageProcessor.from_pretrained` is decorator-generated and untyped, so
+# the two guarded call sites carry `# type: ignore[no-untyped-call]`. That
+# ignore is REQUIRED when [ml] is installed and UNUSED when transformers is
+# absent (the module degrades to Any) — CI and dev machines disagreed and
+# strict's warn_unused_ignores failed the matrix. Scoped to the two modules
+# that import transformers; the rest of the project keeps the strict default.
+[[tool.mypy.overrides]]
+module = [
+  "stageforge.reconstruction.monocular",
+  "stageforge.reconstruction.backplate",
+]
+warn_unused_ignores = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
